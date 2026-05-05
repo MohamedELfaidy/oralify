@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Oralify - Oral Exam Assistant</title>
+    <title>Oralify – Oral Exam Assistant</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -511,7 +511,7 @@
   <body>
     <header>
       <div
-        class="max-w-5xl mx-auto px-3 sm:px-6 py-3 flex items-center justify-between gap-2"
+        class="max-w-7xl mx-auto px-3 sm:px-6 py-3 flex items-center justify-between gap-2"
       >
         <div class="flex items-center gap-2 flex-shrink-0">
           <svg
@@ -577,233 +577,293 @@
       </div>
     </header>
 
-    <main class="max-w-5xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
+    <main class="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
       <!-- TEACHER PANEL -->
-      <div id="teacherPanel" class="section space-y-4 sm:space-y-6">
-        <div class="card p-4 sm:p-6">
-          <h2
-            class="text-base sm:text-lg font-semibold mb-4 flex items-center gap-2"
-          >
-            <i class="fa-solid fa-file-import" style="color: var(--accent)"></i
-            >Import Questions
-          </h2>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-            <div>
-              <p class="text-sm text-[var(--muted)] mb-2">
-                Upload a PDF, DOCX, or image
-              </p>
-              <label
-                for="fileInput"
-                class="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-[var(--border)] rounded-xl p-6 cursor-pointer hover:border-[var(--accent)] transition-colors"
-              >
-                <i
-                  class="fa-solid fa-cloud-arrow-up text-2xl text-[var(--muted)]"
-                ></i>
-                <span class="text-sm text-[var(--muted)] text-center"
-                  >Drop file or
-                  <span style="color: var(--accent)">browse</span></span
+      <div id="teacherPanel" class="section">
+        <!-- ── TOP: Import + Editor (full width) ── -->
+        <div class="space-y-4 sm:space-y-5 mb-4 sm:mb-5">
+          <div class="card p-4 sm:p-6">
+            <h2
+              class="text-base sm:text-lg font-semibold mb-4 flex items-center gap-2"
+            >
+              <i
+                class="fa-solid fa-file-import"
+                style="color: var(--accent)"
+              ></i
+              >Import Questions
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+              <div>
+                <p class="text-sm text-[var(--muted)] mb-2">
+                  Upload a PDF, DOCX, or image
+                </p>
+                <label
+                  for="fileInput"
+                  class="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-[var(--border)] rounded-xl p-5 cursor-pointer hover:border-[var(--accent)] transition-colors"
                 >
-                <span
-                  id="fileName"
-                  class="text-xs text-[var(--muted)] hidden text-center break-all"
-                ></span>
-              </label>
+                  <i
+                    class="fa-solid fa-cloud-arrow-up text-2xl text-[var(--muted)]"
+                  ></i>
+                  <span class="text-sm text-[var(--muted)] text-center"
+                    >Drop file or
+                    <span style="color: var(--accent)">browse</span></span
+                  >
+                  <span
+                    id="fileName"
+                    class="text-xs text-[var(--muted)] hidden text-center break-all"
+                  ></span>
+                </label>
+                <input
+                  type="file"
+                  id="fileInput"
+                  class="hidden"
+                  accept=".pdf,.docx,.doc,.png,.jpg,.jpeg,.bmp,.tiff,.tif,.txt"
+                  onchange="onFileSelected(this)"
+                />
+                <button
+                  class="btn btn-primary mt-3 w-full"
+                  onclick="uploadFile()"
+                  id="btnUpload"
+                  disabled
+                >
+                  <i class="fa-solid fa-wand-magic-sparkles"></i> Process with
+                  AI
+                </button>
+              </div>
+              <div>
+                <p class="text-sm text-[var(--muted)] mb-2">
+                  Or paste / type raw text
+                </p>
+                <textarea
+                  id="manualText"
+                  rows="5"
+                  class="inp"
+                  style="resize: vertical"
+                  placeholder="Paste Question content here…"
+                ></textarea>
+                <button
+                  class="btn btn-primary mt-3 w-full"
+                  onclick="processManual()"
+                >
+                  <i class="fa-solid fa-wand-magic-sparkles"></i> Process with
+                  AI
+                </button>
+              </div>
+            </div>
+            <div
+              id="aiLoading"
+              class="hidden mt-4 flex items-center gap-3 text-[var(--muted)] text-sm"
+            >
+              <svg
+                class="animate-spin w-5 h-5 flex-shrink-0"
+                style="color: var(--accent)"
+                viewBox="0 0 24 24"
+                fill="none"
+              >
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  stroke-width="3"
+                  stroke-dasharray="30 10"
+                /></svg
+              >AI is generating questions…
+            </div>
+          </div>
+
+          <div id="editorSection" class="card p-4 sm:p-6 hidden">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+              <h2
+                class="text-base sm:text-lg font-semibold flex items-center gap-2"
+              >
+                <i class="fa-solid fa-pencil" style="color: var(--accent2)"></i>
+                Review &amp; Edit (<span id="editorCount">0</span>)
+              </h2>
+              <div class="flex gap-2">
+                <button
+                  class="btn btn-secondary btn-sm"
+                  onclick="addBlankQuestion()"
+                >
+                  <i class="fa-solid fa-plus"></i> Add
+                </button>
+                <button
+                  class="btn btn-success btn-sm"
+                  onclick="saveAllQuestions()"
+                >
+                  <i class="fa-solid fa-floppy-disk"></i> Save to Database
+                </button>
+              </div>
+            </div>
+            <div id="editorList" class="space-y-4"></div>
+          </div>
+        </div>
+
+        <!-- ── BOTTOM: Questions + Results side by side on desktop ── -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
+          <!-- Left col: Questions -->
+          <div class="card p-4 sm:p-6 flex flex-col">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+              <h2
+                class="text-base sm:text-lg font-semibold flex items-center gap-2"
+              >
+                <i class="fa-solid fa-database" style="color: var(--gold)"></i>
+                Questions (<span id="dbCount">0</span>)
+              </h2>
+              <div class="flex gap-2">
+                <button
+                  class="btn btn-secondary btn-sm"
+                  onclick="loadDbQuestions()"
+                >
+                  <i class="fa-solid fa-rotate-right"></i>
+                </button>
+                <button
+                  class="btn btn-danger btn-sm"
+                  onclick="clearAllQuestions()"
+                >
+                  <i class="fa-solid fa-trash"></i> Clear
+                </button>
+              </div>
+            </div>
+            <div class="relative mb-3">
+              <i
+                class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)] text-sm pointer-events-none"
+              ></i>
               <input
-                type="file"
-                id="fileInput"
-                class="hidden"
-                accept=".pdf,.docx,.doc,.png,.jpg,.jpeg,.bmp,.tiff,.tif,.txt"
-                onchange="onFileSelected(this)"
+                type="text"
+                id="dbSearch"
+                class="inp pl-9 py-2 text-sm"
+                placeholder="Search by keyword…"
+                oninput="filterQuestions(this.value)"
               />
               <button
-                class="btn btn-primary mt-3 w-full"
-                onclick="uploadFile()"
-                id="btnUpload"
-                disabled
+                id="dbSearchClear"
+                class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted)] text-sm"
+                onclick="clearQSearch()"
               >
-                <i class="fa-solid fa-wand-magic-sparkles"></i> Process with AI
+                <i class="fa-solid fa-xmark"></i>
               </button>
             </div>
-            <div>
-              <p class="text-sm text-[var(--muted)] mb-2">
-                Or paste / type raw text
-              </p>
-              <textarea
-                id="manualText"
-                rows="5"
-                class="inp"
-                style="resize: vertical"
-                placeholder="Paste question content here…"
-              ></textarea>
-              <button
-                class="btn btn-primary mt-3 w-full"
-                onclick="processManual()"
-              >
-                <i class="fa-solid fa-wand-magic-sparkles"></i> Process with AI
-              </button>
-            </div>
-          </div>
-          <div
-            id="aiLoading"
-            class="hidden mt-4 flex items-center gap-3 text-[var(--muted)] text-sm"
-          >
-            <svg
-              class="animate-spin w-5 h-5 flex-shrink-0"
-              style="color: var(--accent)"
-              viewBox="0 0 24 24"
-              fill="none"
+            <p
+              id="dbSearchInfo"
+              class="hidden text-xs text-[var(--muted)] mb-2"
+            ></p>
+            <div
+              id="dbList"
+              class="flex-1 overflow-y-auto"
+              style="max-height: 520px"
+            ></div>
+            <p
+              id="dbEmpty"
+              class="text-[var(--muted)] text-sm text-center py-8"
             >
-              <circle
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                stroke-width="3"
-                stroke-dasharray="30 10"
-              /></svg
-            >AI is generating questions…
+              No questions yet.
+            </p>
           </div>
-        </div>
 
-        <div id="editorSection" class="card p-4 sm:p-6 hidden">
-          <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
-            <h2
-              class="text-base sm:text-lg font-semibold flex items-center gap-2"
-            >
-              <i class="fa-solid fa-pencil" style="color: var(--accent2)"></i>
-              Review &amp; Edit (<span id="editorCount">0</span>)
-            </h2>
-            <div class="flex gap-2">
-              <button
-                class="btn btn-secondary btn-sm"
-                onclick="addBlankQuestion()"
+          <!-- Right col: Results -->
+          <div class="card p-4 sm:p-6 flex flex-col">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+              <h2
+                class="text-base sm:text-lg font-semibold flex items-center gap-2"
               >
-                <i class="fa-solid fa-plus"></i> Add
-              </button>
+                <i class="fa-solid fa-trophy" style="color: var(--gold)"></i
+                >Student Results
+              </h2>
+              <div class="flex gap-2">
+                <button
+                  class="btn btn-secondary btn-sm"
+                  onclick="loadResults()"
+                >
+                  <i class="fa-solid fa-rotate-right"></i>
+                </button>
+                <a
+                  href="/export_results"
+                  class="btn btn-success btn-sm"
+                  download
+                >
+                  <i class="fa-solid fa-file-excel"></i> Export
+                </a>
+              </div>
+            </div>
+            <div class="relative mb-3">
+              <i
+                class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)] text-sm pointer-events-none"
+              ></i>
+              <input
+                type="text"
+                id="resultsSearch"
+                class="inp pl-9 py-2 text-sm"
+                placeholder="Search by student name…"
+                oninput="filterResults(this.value)"
+              />
               <button
-                class="btn btn-success btn-sm"
-                onclick="saveAllQuestions()"
+                id="resultsSearchClear"
+                class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted)] text-sm"
+                onclick="clearResultsSearch()"
               >
-                <i class="fa-solid fa-floppy-disk"></i> Save
+                <i class="fa-solid fa-xmark"></i>
               </button>
             </div>
-          </div>
-          <div id="editorList" class="space-y-4"></div>
-        </div>
-
-        <div class="card p-4 sm:p-6">
-          <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
-            <h2
-              class="text-base sm:text-lg font-semibold flex items-center gap-2"
-            >
-              <i class="fa-solid fa-database" style="color: var(--gold)"></i>
-              Questions (<span id="dbCount">0</span>)
-            </h2>
-            <div class="flex gap-2">
-              <button
-                class="btn btn-secondary btn-sm"
-                onclick="loadDbQuestions()"
+            <p
+              id="resultsSearchInfo"
+              class="hidden text-xs text-[var(--muted)] mb-2"
+            ></p>
+            <!-- Blur overlay -->
+            <div id="resultsBlurWrapper" class="relative">
+              <div
+                id="resultsBlurOverlay"
+                class="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-xl cursor-pointer"
+                style="
+                  backdrop-filter: blur(6px);
+                  -webkit-backdrop-filter: blur(6px);
+                  background: rgba(0, 0, 0, 0.15);
+                "
+                onclick="promptRevealResults()"
               >
-                <i class="fa-solid fa-rotate-right"></i>
-              </button>
-              <button
-                class="btn btn-danger btn-sm"
-                onclick="clearAllQuestions()"
-              >
-                <i class="fa-solid fa-trash"></i> Clear
-              </button>
+                <div
+                  class="w-12 h-12 rounded-full flex items-center justify-center text-xl"
+                  style="background: var(--accent); color: #fff"
+                >
+                  <i class="fa-solid fa-eye"></i>
+                </div>
+                <p class="text-sm font-semibold" style="color: var(--text)">
+                  Click to view results
+                </p>
+              </div>
+              <div class="overflow-auto" style="max-height: 520px">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Student</th>
+                      <th>Score</th>
+                      <th class="hidden sm:table-cell">Date</th>
+                      <th class="text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="resultsBody">
+                    <tr>
+                      <td
+                        colspan="4"
+                        class="text-center text-[var(--muted)] py-6"
+                      >
+                        No results yet.
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-          <div class="relative mb-3">
-            <i
-              class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)] text-sm pointer-events-none"
-            ></i>
-            <input
-              type="text"
-              id="dbSearch"
-              class="inp pl-9 py-2 text-sm"
-              placeholder="Search by keyword…"
-              oninput="filterQuestions(this.value)"
-            />
-            <button
-              id="dbSearchClear"
-              class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted)] text-sm"
-              onclick="clearQSearch()"
-            >
-              <i class="fa-solid fa-xmark"></i>
-            </button>
-          </div>
-          <p
-            id="dbSearchInfo"
-            class="hidden text-xs text-[var(--muted)] mb-2"
-          ></p>
-          <div id="dbList"></div>
-          <p id="dbEmpty" class="text-[var(--muted)] text-sm text-center py-8">
-            No questions yet.
-          </p>
-        </div>
-
-        <div class="card p-4 sm:p-6">
-          <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
-            <h2
-              class="text-base sm:text-lg font-semibold flex items-center gap-2"
-            >
-              <i class="fa-solid fa-trophy" style="color: var(--gold)"></i
-              >Student Results
-            </h2>
-            <button class="btn btn-secondary btn-sm" onclick="loadResults()">
-              <i class="fa-solid fa-rotate-right"></i>
-            </button>
-          </div>
-          <div class="relative mb-3">
-            <i
-              class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)] text-sm pointer-events-none"
-            ></i>
-            <input
-              type="text"
-              id="resultsSearch"
-              class="inp pl-9 py-2 text-sm"
-              placeholder="Search by student name…"
-              oninput="filterResults(this.value)"
-            />
-            <button
-              id="resultsSearchClear"
-              class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted)] text-sm"
-              onclick="clearResultsSearch()"
-            >
-              <i class="fa-solid fa-xmark"></i>
-            </button>
-          </div>
-          <p
-            id="resultsSearchInfo"
-            class="hidden text-xs text-[var(--muted)] mb-2"
-          ></p>
-          <div class="overflow-x-auto">
-            <table>
-              <thead>
-                <tr>
-                  <th>Student</th>
-                  <th>Score</th>
-                  <th class="hidden sm:table-cell">Date</th>
-                  <th class="text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="resultsBody">
-                <tr>
-                  <td colspan="4" class="text-center text-[var(--muted)] py-6">
-                    No results yet.
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            <!-- /resultsBlurWrapper -->
           </div>
         </div>
+        <!-- /bottom grid -->
       </div>
       <!-- /teacherPanel -->
 
       <!-- STUDENT PANEL -->
       <div id="studentPanel" class="section hidden">
-        <div class="max-w-xl mx-auto space-y-3 sm:space-y-4">
+        <div class="max-w-2xl mx-auto space-y-3 sm:space-y-4">
           <div id="nameSection" class="card p-6 sm:p-10 text-center">
             <svg
               class="w-14 h-14 sm:w-16 sm:h-16 mx-auto logo-icon"
@@ -847,12 +907,21 @@
                 placeholder="Enter your full name"
                 onkeydown="if(event.key==='Enter') startExam()"
               />
-              <button
-                class="btn btn-primary w-full py-3 text-base"
-                onclick="startExam()"
-              >
-                <i class="fa-solid fa-play"></i> Start Exam
-              </button>
+              <div class="flex gap-2">
+                <button
+                  class="btn btn-primary flex-1 py-3 text-sm sm:text-base"
+                  onclick="startExam()"
+                >
+                  <i class="fa-solid fa-play"></i> Start Exam
+                </button>
+                <button
+                  class="btn btn-secondary flex-1 py-3 text-sm sm:text-base"
+                  onclick="switchTab('teacher'); toast('The exam has ended.', 'success');"
+                >
+                  <i class="fa-solid fa-chalkboard-teacher"></i>
+                  Finish Exam
+                </button>
+              </div>
             </div>
           </div>
 
@@ -912,8 +981,18 @@
             <div class="card p-4 sm:p-5">
               <p
                 id="questionText"
-                class="text-base sm:text-lg font-medium leading-relaxed mb-4"
+                class="text-base sm:text-lg font-medium leading-relaxed mb-3"
               ></p>
+              <p
+                id="multiAnswerLabel"
+                class="hidden text-xs font-semibold mb-3 px-2 py-1 rounded-lg inline-block"
+                style="
+                  background: rgba(79, 142, 247, 0.12);
+                  color: var(--accent);
+                "
+              >
+                <i class="fa-solid fa-check-double mr-1"></i>Select 2 answers
+              </p>
               <div id="optionsList" class="space-y-2"></div>
             </div>
 
@@ -931,23 +1010,14 @@
               <p id="hintText" class="text-sm text-[var(--text2)]"></p>
             </div>
 
-            <div class="flex gap-2">
-              <button
-                id="btnSubmit"
-                class="btn btn-primary flex-1 py-3 text-sm sm:text-base"
-                onclick="submitAnswer()"
-                disabled
-              >
-                <i class="fa-solid fa-paper-plane"></i> Submit
-              </button>
-              <button
-                class="btn btn-secondary py-3 px-3 sm:px-5"
-                onclick="confirmFinish()"
-              >
-                <i class="fa-solid fa-flag-checkered"></i>
-                <span class="hidden sm:inline">Finish</span>
-              </button>
-            </div>
+            <button
+              id="btnSubmit"
+              class="btn btn-primary w-full py-3 text-sm sm:text-base"
+              onclick="submitAnswer()"
+              disabled
+            >
+              <i class="fa-solid fa-paper-plane"></i> Submit
+            </button>
 
             <div class="card p-3">
               <p
@@ -962,7 +1032,7 @@
                   onclick="useHelp('hint')"
                 >
                   <i class="fa-solid fa-lightbulb"></i><span>Hint</span
-                  ><span class="cost">−0.5</span>
+                  ><span class="cost">-0.5</span>
                 </button>
                 <button
                   class="help-btn"
@@ -1061,7 +1131,7 @@
                 class="text-sm font-semibold text-[var(--muted)] uppercase tracking-wider"
               >
                 <i class="fa-solid fa-lock mr-1" style="color: var(--gold)"></i
-                >Professor – Confirm Score
+                >Professor - Confirm Score
               </p>
               <label class="text-xs text-[var(--muted)] block">
                 Override score — leave blank to keep
@@ -1092,25 +1162,6 @@
     </main>
 
     <!-- MODALS -->
-    <div id="finishModal" class="modal-backdrop">
-      <div class="modal-box card p-5 sm:p-6 space-y-4">
-        <h3 class="text-lg font-semibold">Finish exam?</h3>
-        <p class="text-sm text-[var(--muted)]">
-          This will end the exam and show the result for professor review.
-        </p>
-        <div class="flex gap-3">
-          <button
-            class="btn btn-secondary flex-1"
-            onclick="closeModal('finishModal')"
-          >
-            Cancel
-          </button>
-          <button class="btn btn-danger flex-1" onclick="finishExamStudent()">
-            Yes, Finish
-          </button>
-        </div>
-      </div>
-    </div>
 
     <div id="askAiModal" class="modal-backdrop">
       <div class="modal-box card p-5 sm:p-6 space-y-4">
@@ -1130,7 +1181,7 @@
             Cancel
           </button>
           <button class="btn btn-primary flex-1" onclick="confirmAskAi()">
-            Confirm (−1)
+            Confirm (-1)
           </button>
         </div>
       </div>
@@ -1160,7 +1211,7 @@
             step="0.5"
             min="0"
             max="10"
-            placeholder="0 – 10"
+            placeholder="0 - 10"
           />
         </div>
         <div class="flex gap-3">
@@ -1186,21 +1237,16 @@
       function toggleTheme() {
         const html = document.documentElement;
         const isDark = html.getAttribute("data-theme") === "dark";
-
         const next = isDark ? "light" : "dark";
-
         html.setAttribute("data-theme", next);
         localStorage.setItem("oralify-theme", next);
-
-        document.getElementById("themeIcon").className =
-          next === "dark" ? "fa-solid fa-sun" : "fa-solid fa-moon";
+        document.getElementById("themeIcon").className = isDark
+          ? "fa-solid fa-moon"
+          : "fa-solid fa-sun";
       }
-
       (function initTheme() {
         const saved = localStorage.getItem("oralify-theme") || "light";
-
         document.documentElement.setAttribute("data-theme", saved);
-
         document.addEventListener("DOMContentLoaded", () => {
           document.getElementById("themeIcon").className =
             saved === "dark" ? "fa-solid fa-sun" : "fa-solid fa-moon";
@@ -1210,8 +1256,11 @@
       // ── State ─────────────────────────────────────────────────────────────────────
       const state = {
         selectedOption: null,
+        selectedOptions: new Set(),
         currentOptions: [],
         removedIndices: [],
+        isMultiAnswer: false,
+        numCorrect: 1,
         timerInterval: null,
         timerSeconds: 60,
         timerMax: 60,
@@ -1239,6 +1288,11 @@
           loadDbQuestions();
           loadResults();
         }
+        if (tab === "teacher") {
+          loadDbQuestions();
+          loadResults();
+          lockResults();
+        } // add lockResults()
       }
 
       // ── Toast ─────────────────────────────────────────────────────────────────────
@@ -1389,9 +1443,28 @@
       </div>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <label class="text-xs block mb-1" style="color:var(--muted)">Correct Answer</label>
-          <select class="inp text-sm py-1.5"
-            onchange="state.editorQuestions[${idx}].correct_answer=this.value">${correctOpts}</select>
+          <label class="text-xs font-semibold block mb-2" style="color:var(--muted)">Correct Answer(s)</label>
+          <div class="flex flex-wrap gap-2" id="editor-correct-${idx}">
+            ${q.options
+              .map(
+                (
+                  opt,
+                  oi
+                ) => `<label class="flex items-center gap-1.5 cursor-pointer px-2 py-1 rounded-lg border text-xs font-semibold transition-colors"
+              style="border-color:var(--border);background:var(--inp-bg)">
+              <input type="checkbox" value="${escHtml(opt)}"
+                ${
+                  (q.correct_answers || [q.correct_answer || ""]).includes(opt)
+                    ? "checked"
+                    : ""
+                }
+                class="w-3.5 h-3.5" style="accent-color:var(--accent)"
+                onchange="updateEditorCorrect(${idx})" />
+              <span>${String.fromCharCode(65 + oi)}</span>
+            </label>`
+              )
+              .join("")}
+          </div>
         </div>
         <div>
           <label class="text-xs block mb-1" style="color:var(--muted)">Hint</label>
@@ -1401,6 +1474,15 @@
       </div>`;
           list.appendChild(el);
         });
+      }
+      function updateEditorCorrect(idx) {
+        const div = document.getElementById(`editor-correct-${idx}`);
+        if (!div) return;
+        const checked = Array.from(div.querySelectorAll("input:checked")).map(
+          (cb) => cb.value
+        );
+        state.editorQuestions[idx].correct_answers = checked;
+        state.editorQuestions[idx].correct_answer = checked[0] || "";
       }
       function removeEditorOption(qIdx, oIdx) {
         state.editorQuestions[qIdx].options.splice(oIdx, 1);
@@ -1428,9 +1510,13 @@
           toast("Nothing to save.", "error");
           return;
         }
-        const data = await api("/save_questions", {
-          questions: state.editorQuestions,
-        });
+        // Ensure correct_answers is always an array
+        const payload = state.editorQuestions.map((q) => ({
+          ...q,
+          correct_answers:
+            q.correct_answers || (q.correct_answer ? [q.correct_answer] : []),
+        }));
+        const data = await api("/save_questions", { questions: payload });
         if (!data.ok) {
           toast(data.error, "error");
           return;
@@ -1534,10 +1620,31 @@
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label class="text-xs block mb-1" style="color:var(--muted)">Correct Answer</label>
-              <select id="dbedit-${
+              <label class="text-xs font-semibold block mb-2" style="color:var(--muted)">Correct Answer(s) <span class="font-normal">(check all that apply)</span></label>
+              <div id="dbedit-${
                 q.id
-              }-correct" class="inp text-sm py-1.5">${correctOpts}</select>
+              }-correct-checks" class="flex flex-wrap gap-2">
+                ${q.options
+                  .map(
+                    (
+                      opt,
+                      oi
+                    ) => `<label class="flex items-center gap-1.5 cursor-pointer px-2 py-1 rounded-lg border text-xs font-semibold transition-colors"
+                  style="border-color:var(--border);background:var(--inp-bg)">
+                  <input type="checkbox" value="${escHtml(opt)}"
+                    ${
+                      (q.correct_answers || [q.correct_answer || ""]).includes(
+                        opt
+                      )
+                        ? "checked"
+                        : ""
+                    }
+                    class="w-3.5 h-3.5" style="accent-color:var(--accent)" />
+                  <span>${String.fromCharCode(65 + oi)}</span>
+                </label>`
+                  )
+                  .join("")}
+              </div>
             </div>
             <div>
               <label class="text-xs block mb-1" style="color:var(--muted)">Hint</label>
@@ -1595,13 +1702,18 @@
           document.getElementById(`dbedit-${id}-text`)?.value.trim() || "";
         const hint =
           document.getElementById(`dbedit-${id}-hint`)?.value.trim() || "";
-        const correct =
-          document.getElementById(`dbedit-${id}-correct`)?.value.trim() || "";
         const optEls = document
           .getElementById(`dbedit-${id}-opts`)
           .querySelectorAll("input.inp");
         const options = Array.from(optEls)
           .map((i) => i.value.trim())
+          .filter(Boolean);
+        // Collect all checked correct answers
+        const correctCheckboxes = document
+          .getElementById(`dbedit-${id}-correct-checks`)
+          .querySelectorAll("input[type=checkbox]:checked");
+        const correct_answers = Array.from(correctCheckboxes)
+          .map((cb) => cb.value)
           .filter(Boolean);
         if (!text) {
           toast("Question text cannot be empty.", "error");
@@ -1611,14 +1723,20 @@
           toast("Need at least 2 options.", "error");
           return;
         }
-        if (!options.includes(correct)) {
-          toast("Correct answer must match one of the options.", "error");
+        if (!correct_answers.length) {
+          toast("Select at least one correct answer.", "error");
           return;
+        }
+        for (const c of correct_answers) {
+          if (!options.includes(c)) {
+            toast(`Correct answer "${c}" not in options.`, "error");
+            return;
+          }
         }
         const data = await api(`/update_question/${id}`, {
           text,
           options,
-          correct_answer: correct,
+          correct_answers,
           hint,
         });
         if (!data.ok) {
@@ -1834,12 +1952,24 @@
         loadQuestion(data.question, data.score);
       }
 
-      // ── Question ──────────────────────────────────────────────────────────────────
+      // ── Question ────────────────────────────────────────────────────────────────
       function loadQuestion(q, score) {
         state.currentOptions = [...q.options];
-        state.selectedOption = null;
+        state.selectedOptions = new Set(); // multi-answer selections
         state.removedIndices = [];
+        state.isMultiAnswer = q.multi_answer || false;
+        state.numCorrect = q.num_correct || 1;
         document.getElementById("questionText").textContent = q.text;
+
+        // Show instruction label for multi-answer questions
+        const multiLabel = document.getElementById("multiAnswerLabel");
+        if (state.isMultiAnswer) {
+          multiLabel.textContent = `Select ${state.numCorrect} answers`;
+          multiLabel.classList.remove("hidden");
+        } else {
+          multiLabel.classList.add("hidden");
+        }
+
         updateScoreDisplay(score);
         document.getElementById("hintBox").classList.add("hidden");
         renderOptions();
@@ -1854,50 +1984,106 @@
           const btn = document.createElement("button");
           btn.className = "option-btn";
           if (state.removedIndices.includes(idx)) btn.classList.add("removed");
-          btn.textContent = opt;
-          btn.onclick = () => selectOption(opt, btn);
+          // Show checkbox indicator for multi-answer
+          if (state.isMultiAnswer) {
+            const cb = document.createElement("span");
+            cb.className =
+              "inline-block w-4 h-4 border rounded mr-2 flex-shrink-0 align-middle";
+            cb.style.cssText =
+              "border-color:var(--border);background:var(--inp-bg);display:inline-block;vertical-align:middle;margin-right:8px;border-radius:3px";
+            cb.id = `cb-${idx}`;
+            btn.appendChild(cb);
+            btn.appendChild(document.createTextNode(opt));
+          } else {
+            btn.textContent = opt;
+          }
+          btn.dataset.opt = opt;
+          btn.dataset.idx = idx;
+          btn.onclick = () => selectOption(opt, idx, btn);
           list.appendChild(btn);
         });
       }
-      function selectOption(opt, btn) {
+      function selectOption(opt, idx, btn) {
         if (btn.disabled || btn.classList.contains("removed")) return;
-        state.selectedOption = opt;
-        document
-          .querySelectorAll(".option-btn")
-          .forEach((b) => b.classList.remove("selected"));
-        btn.classList.add("selected");
-        document.getElementById("btnSubmit").disabled = false;
+        if (state.isMultiAnswer) {
+          // Toggle selection — allow up to numCorrect selections
+          if (state.selectedOptions.has(opt)) {
+            state.selectedOptions.delete(opt);
+            btn.classList.remove("selected");
+            const cb = document.getElementById(`cb-${idx}`);
+            if (cb) {
+              cb.style.background = "var(--inp-bg)";
+              cb.style.borderColor = "var(--border)";
+              cb.innerHTML = "";
+            }
+          } else {
+            if (state.selectedOptions.size >= state.numCorrect) {
+              toast(`You can only select ${state.numCorrect} answers.`, "info");
+              return;
+            }
+            state.selectedOptions.add(opt);
+            btn.classList.add("selected");
+            const cb = document.getElementById(`cb-${idx}`);
+            if (cb) {
+              cb.style.background = "var(--accent)";
+              cb.style.borderColor = "var(--accent)";
+              cb.innerHTML =
+                '<svg viewBox="0 0 10 10" width="14" height="14"><polyline points="1.5,5 4,7.5 8.5,2.5" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>';
+            }
+          }
+          document.getElementById("btnSubmit").disabled =
+            state.selectedOptions.size === 0;
+        } else {
+          // Single answer
+          state.selectedOptions = new Set([opt]);
+          document
+            .querySelectorAll(".option-btn")
+            .forEach((b) => b.classList.remove("selected"));
+          btn.classList.add("selected");
+          document.getElementById("btnSubmit").disabled = false;
+        }
       }
 
       // ── Submit ────────────────────────────────────────────────────────────────────
       async function submitAnswer(timedOut = false) {
-        if (!state.selectedOption) return;
+        if (!timedOut && state.selectedOptions.size === 0) return;
         stopTimer();
         document.getElementById("btnSubmit").disabled = true;
         document
           .querySelectorAll(".option-btn")
           .forEach((b) => (b.disabled = true));
+
+        const selectedArr = Array.from(state.selectedOptions);
         const data = await api("/submit_answer", {
-          selected_option: state.selectedOption,
+          selected_options: selectedArr,
           timed_out: timedOut,
         });
         if (!data.ok) {
           toast(data.error, "error");
           return;
         }
+
+        // Highlight options
+        const correctSet = new Set(
+          (data.correct_answers || []).map((s) => s.trim())
+        );
+        const selectedSet = new Set(selectedArr.map((s) => s.trim()));
         document.querySelectorAll(".option-btn").forEach((btn) => {
-          if (btn.textContent.trim() === data.correct_answer)
+          const opt = (btn.dataset.opt || btn.textContent).trim();
+          if (correctSet.has(opt)) {
             btn.classList.add("correct");
-          else if (btn.classList.contains("selected"))
+          } else if (selectedSet.has(opt)) {
             btn.classList.add("incorrect");
+          }
         });
+
         setTimeout(() => {
           showPostExam(
             data.student_name,
             data.score,
             data.helps_used || [],
-            data.correct,
-            data.correct_answer,
+            data.result,
+            data.correct_answers,
             data.time_taken,
             data.timed_out || false
           );
@@ -1927,20 +2113,14 @@
               );
               if (avail.length) state.selectedOption = avail[0];
             }
-            if (state.selectedOption) await submitAnswer(true);
-            else {
-              const d = await api("/finish_exam_student", {}, "POST");
-              if (d.ok)
-                showPostExam(
-                  d.student_name,
-                  d.final_score,
-                  d.helps_used || [],
-                  null,
-                  null,
-                  d.time_taken,
-                  true
-                );
+            if (state.selectedOptions.size === 0) {
+              // Pick first available option so backend can evaluate
+              const avail = state.currentOptions.filter(
+                (_, i) => !state.removedIndices.includes(i)
+              );
+              if (avail.length) state.selectedOptions = new Set([avail[0]]);
             }
+            await submitAnswer(true);
           }
         }, 1000);
       }
@@ -1985,18 +2165,21 @@
         } else if (type === "remove_wrong") {
           state.removedIndices = data.remove_indices;
           renderOptions();
-          if (
-            state.selectedOption &&
-            state.removedIndices.includes(
-              state.currentOptions.indexOf(state.selectedOption)
-            )
-          ) {
-            state.selectedOption = null;
-            document.getElementById("btnSubmit").disabled = true;
-          }
+          // Deselect any removed options
+          const removedOpts = new Set(
+            state.removedIndices.map((i) => state.currentOptions[i])
+          );
+          for (const opt of removedOpts) state.selectedOptions.delete(opt);
+          state.selectedOption =
+            state.selectedOptions.size > 0
+              ? [...state.selectedOptions][0]
+              : null;
+          document.getElementById("btnSubmit").disabled =
+            state.selectedOptions.size === 0;
         } else if (type === "change_question") {
           state.removedIndices = [];
           state.selectedOption = null;
+          state.selectedOptions = new Set();
           loadQuestion(data.question, data.score);
         } else if (type === "add_time") {
           state.timerSeconds += data.extra_seconds;
@@ -2009,81 +2192,94 @@
         }
       }
 
-      // ── Early finish ──────────────────────────────────────────────────────────────
-      function confirmFinish() {
-        openModal("finishModal");
-      }
-      async function finishExamStudent() {
-        closeModal("finishModal");
-        stopTimer();
-        const data = await api("/finish_exam_student", {}, "POST");
-        if (!data.ok) {
-          toast(data.error, "error");
-          return;
-        }
-        showPostExam(
-          data.student_name,
-          data.final_score,
-          data.helps_used || [],
-          null,
-          null,
-          data.time_taken,
-          false
-        );
-      }
-
       // ── Post-exam ─────────────────────────────────────────────────────────────────
       function showPostExam(
         name,
         score,
         helpsUsed,
-        wasCorrect,
+        resultLabel,
         correctAnswer,
         timeTaken,
         timedOut = false
       ) {
+        const wasCorrect = resultLabel;
         document.getElementById("examSection").classList.add("hidden");
         document.getElementById("postExamSection").classList.remove("hidden");
         document.getElementById("postStudentName").textContent = name;
         document.getElementById("postScore").textContent = score.toFixed(1);
-        document.getElementById("postTime").textContent = timeTaken ?? "–";
+        document.getElementById("postTime").textContent = timeTaken ?? "-";
         document.getElementById("keepScoreHint").textContent = score.toFixed(1);
         state._postExamScore = score;
         state._postExamName = name;
 
+        // correctAnswer is now array of strings
+        const correctAnswersList = Array.isArray(correctAnswer)
+          ? correctAnswer
+          : correctAnswer
+          ? [correctAnswer]
+          : [];
+        const correctAnswersText = correctAnswersList.join(" & ");
+
         const banner = document.getElementById("answerResultBanner");
         banner.style.cssText = "";
-        if (timedOut) {
-          banner.className = "rounded-xl p-4 text-center border";
-          banner.style.borderColor = "var(--warn-bdr)";
-          banner.style.background = "var(--warn-bg)";
-          banner.innerHTML = `<i class="fa-solid fa-clock text-2xl" style="color:var(--warn)"></i>
-      <p class="font-semibold mt-1" style="color:var(--warn)">Time's Up — Score fixed at 7</p>
-      <p class="text-sm mt-1" style="color:var(--muted)">Correct answer: <span class="font-medium" style="color:var(--text)">${escHtml(
-        correctAnswer || ""
-      )}</span></p>`;
-          banner.classList.remove("hidden");
-        } else if (wasCorrect === true) {
-          banner.className = "rounded-xl p-4 text-center border";
-          banner.style.borderColor = "var(--success-bdr)";
-          banner.style.background = "var(--success-bg)";
-          banner.innerHTML = `<i class="fa-solid fa-circle-check text-2xl" style="color:var(--success)"></i>
-      <p class="font-semibold mt-1" style="color:var(--success)">Correct Answer!</p>`;
-          banner.classList.remove("hidden");
-        } else if (wasCorrect === false) {
-          banner.className = "rounded-xl p-4 text-center border";
-          banner.style.borderColor = "var(--danger-bdr)";
-          banner.style.background = "var(--danger-bg)";
-          banner.innerHTML = `<i class="fa-solid fa-circle-xmark text-2xl" style="color:var(--danger)"></i>
-      <p class="font-semibold mt-1" style="color:var(--danger)">Wrong Answer</p>
-      <p class="text-sm mt-1" style="color:var(--muted)">Correct: <span class="font-medium" style="color:var(--text)">${escHtml(
-        correctAnswer || ""
-      )}</span></p>`;
-          banner.classList.remove("hidden");
-        } else {
-          banner.className = "hidden";
-        }
 
+        const RESULT_CONFIG = {
+          timed_out: {
+            icon: "fa-clock",
+            color: "warn",
+            label: "Time's Up — Score fixed at 7",
+          },
+          correct: {
+            icon: "fa-circle-check",
+            color: "success",
+            label: "Correct Answer!",
+          },
+          all_correct: {
+            icon: "fa-check-double",
+            color: "success",
+            label: "Both correct — Full marks!",
+          },
+          partial: {
+            icon: "fa-circle-half-stroke",
+            color: "warn",
+            label: "Partially correct — \u22121 mark",
+          },
+          wrong: {
+            icon: "fa-circle-xmark",
+            color: "danger",
+            label: "Wrong Answer",
+          },
+          all_wrong: {
+            icon: "fa-circle-xmark",
+            color: "danger",
+            label: "Both wrong — \u22122 marks",
+          },
+        };
+
+        const resultKey = timedOut ? "timed_out" : wasCorrect || "wrong";
+        const cfg = RESULT_CONFIG[resultKey] || RESULT_CONFIG["wrong"];
+        const c = cfg.color;
+
+        banner.className = "rounded-xl p-4 text-center border";
+        banner.style.borderColor = "var(--" + c + "-bdr)";
+        banner.style.background = "var(--" + c + "-bg)";
+        banner.innerHTML =
+          '<i class="fa-solid ' +
+          cfg.icon +
+          ' text-2xl" style="color:var(--' +
+          c +
+          ')"></i>' +
+          '<p class="font-semibold mt-1" style="color:var(--' +
+          c +
+          ')">' +
+          cfg.label +
+          "</p>" +
+          (correctAnswersList.length
+            ? '<p class="text-sm mt-1" style="color:var(--muted)">Correct: <span class="font-medium" style="color:var(--text)">' +
+              escHtml(correctAnswersText) +
+              "</span></p>"
+            : "");
+        banner.classList.remove("hidden");
         const LABELS = {
           hint: { icon: "fa-lightbulb", label: "Hint", cost: 0.5 },
           remove_wrong: {
@@ -2122,13 +2318,13 @@
                 };
                 return `<div class="flex items-center justify-between py-1.5 border-b last:border-0" style="border-color:var(--border)">
         <span style="color:var(--text2)"><i class="fa-solid ${info.icon} mr-2 w-4" style="color:var(--accent)"></i>${info.label}</span>
-        <span class="font-mono text-xs" style="color:var(--danger)">−${info.cost}</span>
+        <span class="font-mono text-xs" style="color:var(--danger)">-${info.cost}</span>
       </div>`;
               })
               .join("") +
             `<div class="flex justify-between pt-2 font-semibold text-sm">
       <span style="color:var(--muted)">Total deducted</span>
-      <span class="font-mono" style="color:var(--danger)">−${total}</span>
+      <span class="font-mono" style="color:var(--danger)">-${total}</span>
     </div>`;
         }
       }
@@ -2159,6 +2355,7 @@
         document.getElementById("finalScoreInput").value = "";
         document.getElementById("hintBox").classList.add("hidden");
         state.selectedOption = null;
+        state.selectedOptions = new Set();
         state.usedHelps = new Set();
         stopTimer();
       }
@@ -2183,6 +2380,26 @@
           .replace(/>/g, "&gt;")
           .replace(/"/g, "&quot;")
           .replace(/'/g, "&#039;");
+      }
+
+      // ── Init ──────────────────────────────────────────────────────────────────────
+      // ── Results blur / reveal ─────────────────────────────────────────────────────
+      const RESULTS_PASSWORD = "1234";
+
+      function promptRevealResults() {
+        const pwd = prompt("Enter password to view results:");
+        if (pwd === null) return; // cancelled
+        if (pwd === RESULTS_PASSWORD) {
+          document.getElementById("resultsBlurOverlay").style.display = "none";
+          toast("Results unlocked.", "success");
+        } else {
+          toast("Incorrect password.", "error");
+        }
+      }
+
+      function lockResults() {
+        const overlay = document.getElementById("resultsBlurOverlay");
+        if (overlay) overlay.style.display = "";
       }
 
       // ── Init ──────────────────────────────────────────────────────────────────────

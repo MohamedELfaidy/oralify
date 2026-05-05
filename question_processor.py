@@ -49,7 +49,7 @@ GROQ_SYSTEM_PROMPT = """\
 You are an exam assistant. Convert the following text into multiple-choice questions.
 For each question, provide:
 - The question text
-- An array of answer options (3 to 6 options)
+- An array of answer options (4 to 5 options)
 - The correct answer (exact string matching one of the options)
 - A short hint (one sentence)
 

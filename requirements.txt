@@ -6,3 +6,4 @@ python-docx
 easyocr
 Pillow
 python-dotenv
+openpyxl

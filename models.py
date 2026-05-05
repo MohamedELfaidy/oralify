@@ -11,17 +11,24 @@ db = SQLAlchemy()
 
 
 class Question(db.Model):
-    """A multiple-choice exam question with hint and correct answer."""
+    """
+    A multiple-choice exam question.
+
+    Supports both single and multiple correct answers.
+    correct_answers is a JSON list of strings; each must match one of the options.
+    The legacy `correct_answer` column is kept as a computed alias for the first
+    correct answer so old data still works.
+    """
 
     __tablename__ = "questions"
 
     id = db.Column(db.Integer, primary_key=True)
     text = db.Column(db.Text, nullable=False)
-    _options = db.Column("options", db.Text, nullable=False)  # JSON array stored as text
-    correct_answer = db.Column(db.Text, nullable=False)
+    _options = db.Column("options", db.Text, nullable=False)
+    _correct_answers = db.Column("correct_answers", db.Text, nullable=False)
     hint = db.Column(db.Text, nullable=False, default="")
 
-    # ── options property ────────────────────────────────────────────────
+    # ── options ──────────────────────────────────────────────────────────
 
     @property
     def options(self) -> list[str]:
@@ -31,18 +38,40 @@ class Question(db.Model):
     def options(self, value: list[str]) -> None:
         self._options = json.dumps(value, ensure_ascii=False)
 
-    # ── serialisation ───────────────────────────────────────────────────
+    # ── correct_answers ───────────────────────────────────────────────────
+
+    @property
+    def correct_answers(self) -> list[str]:
+        return json.loads(self._correct_answers)
+
+    @correct_answers.setter
+    def correct_answers(self, value: list[str]) -> None:
+        self._correct_answers = json.dumps(value, ensure_ascii=False)
+
+    # Legacy single-answer alias (first correct answer)
+    @property
+    def correct_answer(self) -> str:
+        answers = self.correct_answers
+        return answers[0] if answers else ""
+
+    @correct_answer.setter
+    def correct_answer(self, value: str) -> None:
+        """Allow setting via single string for backwards compatibility."""
+        self._correct_answers = json.dumps([value.strip()], ensure_ascii=False)
+
+    # ── serialisation ─────────────────────────────────────────────────────
 
     def to_dict(self) -> dict:
         return {
             "id": self.id,
             "text": self.text,
             "options": self.options,
-            "correct_answer": self.correct_answer,
+            "correct_answers": self.correct_answers,
             "hint": self.hint,
+            "multi_answer": len(self.correct_answers) > 1,
         }
 
-    def __repr__(self) -> str:  # pragma: no cover
+    def __repr__(self) -> str:
         return f"<Question id={self.id} text={self.text[:40]!r}>"
 
 
@@ -67,6 +96,3 @@ class StudentResult(db.Model):
             "final_score": self.final_score,
             "timestamp": self.timestamp.strftime("%Y-%m-%d %H:%M"),
         }
-
-    def __repr__(self) -> str:  # pragma: no cover
-        return f"<StudentResult id={self.id} name={self.student_name!r} score={self.final_score}>"
