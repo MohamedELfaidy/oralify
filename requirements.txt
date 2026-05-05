@@ -1,0 +1,8 @@
+flask
+flask-sqlalchemy
+groq
+pdfplumber
+python-docx
+easyocr
+Pillow
+python-dotenv
