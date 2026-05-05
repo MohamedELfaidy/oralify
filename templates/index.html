@@ -1186,16 +1186,21 @@
       function toggleTheme() {
         const html = document.documentElement;
         const isDark = html.getAttribute("data-theme") === "dark";
+
         const next = isDark ? "light" : "dark";
+
         html.setAttribute("data-theme", next);
         localStorage.setItem("oralify-theme", next);
-        document.getElementById("themeIcon").className = isDark
-          ? "fa-solid fa-moon"
-          : "fa-solid fa-sun";
+
+        document.getElementById("themeIcon").className =
+          next === "dark" ? "fa-solid fa-sun" : "fa-solid fa-moon";
       }
+
       (function initTheme() {
-        const saved = localStorage.getItem("oralify-theme") || "dark";
+        const saved = localStorage.getItem("oralify-theme") || "light";
+
         document.documentElement.setAttribute("data-theme", saved);
+
         document.addEventListener("DOMContentLoaded", () => {
           document.getElementById("themeIcon").className =
             saved === "dark" ? "fa-solid fa-sun" : "fa-solid fa-moon";
