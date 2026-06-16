@@ -1,0 +1,1663 @@
+{% extends "base.html" %}
+{% block title %}Teacher Dashboard – Oralify{% endblock %}
+{% block body %}
+<style>
+  .sidebar {
+    width: 200px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 40;
+    transition: transform .3s, background .25s
+  }
+
+  .sidebar.collapsed {
+    transform: translateX(-260px)
+  }
+
+  .main-content {
+    margin-left: 200px;
+    min-height: 100vh;
+    transition: margin .3s
+  }
+
+  .main-content.full {
+    margin-left: 0
+  }
+
+  @media(max-width:1023px) {
+    .sidebar {
+      transform: translateX(-260px)
+    }
+
+    .sidebar.open {
+      transform: translateX(0)
+    }
+
+    .main-content {
+      margin-left: 0
+    }
+  }
+
+  .sidebar-logo {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between
+  }
+
+  .sidebar-nav {
+    flex: 1;
+    padding: 10px 8px;
+    overflow-y: auto
+  }
+
+  .sidebar-footer {
+    padding: 10px 8px;
+    border-top: 1px solid var(--border)
+  }
+
+  .topbar {
+    height: 54px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    position: sticky;
+    top: 0;
+    z-index: 30
+  }
+
+  .content-area {
+    padding: 20px 28px;
+    max-width: 1400px;
+    margin: 0 auto
+  }
+
+  .exam-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px;
+    transition: all .2s;
+    cursor: pointer
+  }
+
+  .exam-card:hover {
+    border-color: var(--accent);
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-1px)
+  }
+
+  .menu-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .5);
+    z-index: 39
+  }
+
+  .menu-overlay.show {
+    display: block
+  }
+
+  .section-panel {
+    display: none
+  }
+
+  .section-panel.active {
+    display: block
+  }
+
+  .toggle-sidebar-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 10px;
+    cursor: pointer;
+    color: var(--muted);
+    transition: all .2s;
+    font-size: 14px
+  }
+
+  .toggle-sidebar-btn:hover {
+    color: var(--accent);
+    border-color: var(--accent)
+  }
+</style>
+
+<div style="display:flex;min-height:100vh">
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <a href="/" style="display:flex;align-items:center;gap:8px;text-decoration:none">
+        <svg class="logo-icon" width="26" height="26" viewBox="0 0 36 36" fill="none">
+          <circle cx="18" cy="18" r="17" stroke="var(--accent)" stroke-width="1.5" />
+          <path d="M10 22 Q18 8 26 22" stroke="var(--accent2)" stroke-width="2" stroke-linecap="round" fill="none" />
+          <circle cx="18" cy="24" r="3" fill="var(--accent)" />
+          <line x1="18" y1="27" x2="18" y2="30" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" />
+        </svg>
+        <span style="font-weight:700;font-size:15px" class="gradient-text">Oralify</span>
+      </a>
+      <button onclick="toggleSidebar()" class="toggle-sidebar-btn" title="Hide sidebar">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="nav-link active" id="navExams" onclick="showSection('exams')"><i class="fa-solid fa-file-alt"
+          style="width:14px"></i> My Exams</button>
+      <button class="nav-link" id="navCreate" onclick="showSection('create')"><i class="fa-solid fa-plus-circle"
+          style="width:14px"></i> Create Exam</button>
+      <button class="nav-link" id="navAccount" onclick="showSection('account')"><i class="fa-solid fa-user-circle"
+          style="width:14px"></i> My Account</button>
+    </nav>
+    <div class="sidebar-footer">
+      <div onclick="showSection('account')"
+        style="padding:8px 12px;margin-bottom:4px;border-radius:9px;background:var(--hover-bg);cursor:pointer;transition:background .2s"
+        onmouseover="this.style.background='var(--hover-bg)'" title="My Account">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
+          <div id="profilePhotoMini"
+            style="width:28px;height:28px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;font-weight:700;flex-shrink:0;overflow:hidden">
+            {{ (teacher.full_name or teacher.username)[0].upper() }}
+          </div>
+          <div style="min-width:0">
+            <p style="font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+              id="sidebarName">{{ teacher.full_name or teacher.username }}</p>
+            <p style="font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{
+              teacher.email }}</p>
+          </div>
+          <i class="fa-solid fa-chevron-right"
+            style="font-size:10px;color:var(--muted);flex-shrink:0;margin-left:auto"></i>
+        </div>
+      </div>
+      <button class="nav-link" onclick="toggleTheme()"><i class="fa-solid fa-moon theme-icon w-4"></i> Toggle
+        Theme</button>
+      <a href="/logout" class="nav-link" style="color:var(--danger)"><i class="fa-solid fa-right-from-bracket w-4"></i>
+        Sign Out</a>
+    </div>
+  </aside>
+  <div class="menu-overlay" id="menuOverlay" onclick="closeMobileMenu()"></div>
+
+  <!-- Main -->
+  <div class="main-content" id="mainContent">
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="toggle-sidebar-btn" id="openSidebarBtn" onclick="toggleSidebar()" title="Show sidebar"
+          style="display:none">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <button class="toggle-sidebar-btn" id="mobileMenuBtn" onclick="openMobileMenu()" style="display:none">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <h2 id="pageTitle" style="font-size:15px;font-weight:600">My Exams</h2>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn btn-primary btn-sm" onclick="showSection('create')"><i class="fa-solid fa-plus"></i> New
+          Exam</button>
+      </div>
+    </div>
+
+    <div class="content-area page-enter">
+
+      <!-- ══ EXAMS LIST ══ -->
+      <div class="section-panel active" id="sectionExams">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px">
+          <div class="stat-card">
+            <div class="stat-value" id="statTotal">–</div>
+            <div class="stat-label">Total Exams</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" style="color:var(--success)" id="statOpen">–</div>
+            <div class="stat-label">Open Now</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" style="color:var(--gold)" id="statAttempts">–</div>
+            <div class="stat-label">Attempts</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" style="color:var(--accent2)" id="statStudents">–</div>
+            <div class="stat-label">Students</div>
+          </div>
+        </div>
+        <div id="examsList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px">
+        </div>
+        <p id="examsEmpty" style="display:none;text-align:center;color:var(--muted);padding:48px;font-size:15px">
+          <i class="fa-solid fa-folder-open" style="font-size:32px;display:block;margin-bottom:12px"></i>
+          No exams yet. <button onclick="showSection('create')"
+            style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:15px;font-family:'Sora',sans-serif">Create
+            your first exam →</button>
+        </p>
+      </div>
+
+      <!-- ══ CREATE EXAM ══ -->
+      <div class="section-panel" id="sectionCreate">
+        <div style="max-width:860px">
+          <div class="card p-6">
+            <h3 style="font-size:16px;font-weight:600;margin-bottom:20px"><i class="fa-solid fa-plus-circle mr-2"
+                style="color:var(--accent)"></i>Create New Exam</h3>
+            <div id="createExamForm"><!-- rendered by renderExamForm() --></div>
+            <button class="btn btn-primary" style="width:100%;padding:12px;margin-top:4px" onclick="createExam()">
+              <i class="fa-solid fa-plus-circle"></i> Create Exam
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ EXAM DETAIL ══ -->
+      <div class="section-panel" id="sectionExamDetail">
+        <button onclick="showSection('exams')" class="btn btn-ghost btn-sm" style="margin-bottom:14px">
+          <i class="fa-solid fa-arrow-left"></i> Back to Exams
+        </button>
+        <div id="examDetailContent"></div>
+      </div>
+
+      <!-- ══ ACCOUNT ══ -->
+      <div class="section-panel" id="sectionAccount">
+        <div style="max-width:700px;display:flex;flex-direction:column;gap:16px">
+
+          <!-- Stats -->
+          <div class="card p-6">
+            <h3 style="font-size:15px;font-weight:600;margin-bottom:16px"><i class="fa-solid fa-chart-bar mr-2"
+                style="color:var(--accent)"></i>My Statistics</h3>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px"
+              id="teacherStats">
+              <div style="text-align:center;padding:12px;border-radius:10px;background:var(--hover-bg)">
+                <p style="font-size:22px;font-weight:700;color:var(--accent)" id="ts_exams">–</p>
+                <p style="font-size:12px;color:var(--muted)">Total Exams</p>
+              </div>
+              <div style="text-align:center;padding:12px;border-radius:10px;background:var(--hover-bg)">
+                <p style="font-size:22px;font-weight:700;color:var(--success)" id="ts_active">–</p>
+                <p style="font-size:12px;color:var(--muted)">Active Now</p>
+              </div>
+              <div style="text-align:center;padding:12px;border-radius:10px;background:var(--hover-bg)">
+                <p style="font-size:22px;font-weight:700;color:var(--gold)" id="ts_attempts">–</p>
+                <p style="font-size:12px;color:var(--muted)">Attempts</p>
+              </div>
+              <div style="text-align:center;padding:12px;border-radius:10px;background:var(--hover-bg)">
+                <p style="font-size:22px;font-weight:700;color:var(--accent2)" id="ts_students">–</p>
+                <p style="font-size:12px;color:var(--muted)">Students</p>
+              </div>
+              <div style="text-align:center;padding:12px;border-radius:10px;background:var(--hover-bg)">
+                <p style="font-size:22px;font-weight:700;color:var(--danger)" id="ts_avg">–</p>
+                <p style="font-size:12px;color:var(--muted)">Avg Score</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Edit profile -->
+          <div class="card p-6">
+            <h3 style="font-size:15px;font-weight:600;margin-bottom:16px"><i class="fa-solid fa-user-pen mr-2"
+                style="color:var(--accent2)"></i>Edit Profile</h3>
+            <div class="form-group"><label class="form-label">Full Name</label><input type="text" id="tFullName"
+                class="inp" value="{{ teacher.full_name }}" /></div>
+            <div class="form-group"><label class="form-label">Email</label><input type="email" id="tEmail" class="inp"
+                value="{{ teacher.email }}" /></div>
+            <button class="btn btn-primary" onclick="updateTeacherProfile()"><i class="fa-solid fa-save"></i> Save
+              Changes</button>
+          </div>
+
+          <!-- Change password -->
+          <div class="card p-6">
+            <h3 style="font-size:15px;font-weight:600;margin-bottom:16px"><i class="fa-solid fa-lock mr-2"
+                style="color:var(--gold)"></i>Change Password</h3>
+            <div class="form-group"><label class="form-label">Current Password</label><input type="password"
+                id="tCurrPwd" class="inp" placeholder="Current password" /></div>
+            <div class="form-group"><label class="form-label">New Password</label><input type="password" id="tNewPwd"
+                class="inp" placeholder="At least 6 characters" /></div>
+            <button class="btn btn-gold" onclick="changeTeacherPassword()"><i class="fa-solid fa-key"></i> Change
+              Password</button>
+          </div>
+
+          <!-- Danger zone -->
+          <div class="card p-6" style="border-color:var(--danger-bdr)">
+            <h3 style="font-size:15px;font-weight:600;margin-bottom:8px;color:var(--danger)"><i
+                class="fa-solid fa-triangle-exclamation mr-2"></i>Danger Zone</h3>
+            <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Permanently delete your account and all
+              associated exams and results. This cannot be undone.</p>
+            <button class="btn btn-danger" onclick="deleteTeacherAccount()"><i class="fa-solid fa-trash"></i> Delete
+              Account</button>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══ ADD QUESTION MODAL ══ -->
+<div id="addQModal" class="modal-backdrop">
+  <div class="modal-box card p-5" style="max-width:740px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h3 style="font-size:15px;font-weight:600"><i class="fa-solid fa-plus-circle mr-2"
+          style="color:var(--accent)"></i>Add Question</h3>
+      <button onclick="closeModal('addQModal')"
+        style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px"><i
+          class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <!-- Tab bar -->
+    <div style="display:flex;gap:3px;background:var(--bg2);border-radius:10px;padding:3px;margin-bottom:16px">
+      <button id="aqtab-manual" onclick="switchAQTab('manual')"
+        style="flex:1;padding:7px;border:none;border-radius:8px;font-family:'Sora',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:all .2s;background:var(--surface);color:var(--accent);box-shadow:var(--shadow)">
+        <i class="fa-solid fa-pen mr-1"></i>Manual
+      </button>
+      <button id="aqtab-ai" onclick="switchAQTab('ai')"
+        style="flex:1;padding:7px;border:none;border-radius:8px;font-family:'Sora',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:all .2s;background:transparent;color:var(--muted)">
+        <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Process with AI
+      </button>
+      <button id="aqtab-import" onclick="switchAQTab('import')"
+        style="flex:1;padding:7px;border:none;border-radius:8px;font-family:'Sora',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:all .2s;background:transparent;color:var(--muted)">
+        <i class="fa-solid fa-file-import mr-1"></i>Import File
+      </button>
+      <button id="aqtab-export" onclick="switchAQTab('export')"
+        style="flex:1;padding:7px;border:none;border-radius:8px;font-family:'Sora',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:all .2s;background:transparent;color:var(--muted)">
+        <i class="fa-solid fa-file-export mr-1"></i>Export
+      </button>
+    </div>
+
+    <!-- MANUAL TAB -->
+    <div id="aqpanel-manual">
+      <div class="form-group">
+        <label class="form-label">Question Text *</label>
+        <textarea id="mq-text" class="inp" rows="3" placeholder="Enter your question here…"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Options * <span style="color:var(--muted);font-weight:400">(minimum 4)</span></label>
+        <div id="mq-opts" style="display:flex;flex-direction:column;gap:6px"></div>
+        <button onclick="addMQOpt()"
+          style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:13px;font-family:'Sora',sans-serif;margin-top:6px">
+          <i class="fa-solid fa-plus"></i> Add option
+        </button>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Correct Answer(s) <span style="color:var(--muted);font-weight:400">(check all that
+            apply)</span></label>
+        <div id="mq-correct" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group">
+          <label class="form-label">Hint <span style="color:var(--muted);font-weight:400">(optional)</span></label>
+          <input type="text" id="mq-hint" class="inp" placeholder="Short hint for the student" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Timer (seconds, blank = 60)</label>
+          <input type="number" id="mq-timer" class="inp" placeholder="60" min="10" />
+        </div>
+      </div>
+      <button class="btn btn-primary" style="width:100%;padding:11px" onclick="saveManualQuestion()">
+        <i class="fa-solid fa-floppy-disk"></i> Save Question
+      </button>
+    </div>
+
+    <!-- AI TAB -->
+    <div id="aqpanel-ai" style="display:none">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div>
+          <label class="form-label">Upload File (PDF/DOCX/Image)</label>
+          <label
+            style="display:flex;flex-direction:column;align-items:center;gap:6px;border:2px dashed var(--border);border-radius:10px;padding:16px;cursor:pointer;transition:border-color .2s"
+            id="aiDropZone" for="aiFile" onmouseover="this.style.borderColor='var(--accent)'"
+            onmouseout="this.style.borderColor='var(--border)'">
+            <i class="fa-solid fa-cloud-arrow-up" style="font-size:22px;color:var(--muted)"></i>
+            <span style="font-size:12px;color:var(--muted)">Drop or <span
+                style="color:var(--accent)">browse</span></span>
+            <span id="aiFileName"
+              style="font-size:11px;color:var(--muted);display:none;word-break:break-all;text-align:center"></span>
+          </label>
+          <input type="file" id="aiFile" style="display:none" accept=".pdf,.docx,.doc,.png,.jpg,.jpeg,.txt"
+            onchange="onAiFile(this)" />
+          <button class="btn btn-secondary" style="width:100%;margin-top:6px;font-size:13px" onclick="processAiFile()"
+            id="aiFileBtn" disabled>
+            <i class="fa-solid fa-wand-magic-sparkles"></i> Process File
+          </button>
+        </div>
+        <div>
+          <label class="form-label">Or Paste Text</label>
+          <textarea id="aiText" class="inp" rows="5" style="resize:vertical"
+            placeholder="Paste exam content or lecture notes…"></textarea>
+          <button class="btn btn-secondary" style="width:100%;margin-top:6px;font-size:13px" onclick="processAiText()">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> Process Text
+          </button>
+        </div>
+      </div>
+      <div style="margin-bottom:12px">
+        <label class="form-label"><i class="fa-solid fa-sliders mr-1" style="color:var(--accent)"></i>AI Instructions
+          <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+        <textarea id="aiInstructions" class="inp" rows="2" style="resize:vertical;font-size:13px"
+          placeholder="e.g. Make questions hard. Generate 5 questions. Focus on practical application."></textarea>
+      </div>
+      <div id="aiLoading" style="display:none;text-align:center;padding:14px;color:var(--muted);font-size:13px">
+        <i class="fa-solid fa-spinner fa-spin mr-2" style="color:var(--accent)"></i>AI is generating questions…
+      </div>
+      <div id="aiPreview" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <p style="font-size:13px;font-weight:600"><span id="aiQCount">0</span> questions generated</p>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-ghost btn-sm" onclick="addAiBlankQ()"><i class="fa-solid fa-plus"></i> Add</button>
+            <button class="btn btn-success btn-sm" onclick="saveAiQuestions()"><i class="fa-solid fa-floppy-disk"></i>
+              Save All</button>
+          </div>
+        </div>
+        <div id="aiQList" style="max-height:340px;overflow-y:auto;display:flex;flex-direction:column;gap:8px"></div>
+      </div>
+    </div>
+
+    <!-- IMPORT TAB -->
+    <div id="aqpanel-import" style="display:none">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="card-inner p-4">
+          <h4 style="font-size:13px;font-weight:600;margin-bottom:8px"><i class="fa-solid fa-file-code mr-1"
+              style="color:var(--accent)"></i>Import from JSON</h4>
+          <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Upload a JSON file exported from Oralify, or
+            matching the question format.</p>
+          <input type="file" id="importJsonFile" accept=".json" class="inp" style="font-size:12px;padding:8px" />
+          <button class="btn btn-primary" style="width:100%;margin-top:8px" onclick="importFromJson()">
+            <i class="fa-solid fa-file-import"></i> Import JSON
+          </button>
+        </div>
+        <div class="card-inner p-4">
+          <h4 style="font-size:13px;font-weight:600;margin-bottom:8px"><i class="fa-solid fa-file-excel mr-1"
+              style="color:var(--success)"></i>Import from Excel</h4>
+          <p style="font-size:12px;color:var(--muted);margin-bottom:6px">Excel columns: <strong>text, options (A|B|C|D),
+              correct_answers, hint, timer_seconds</strong></p>
+          <input type="file" id="importExcelFile" accept=".xlsx,.xls" class="inp" style="font-size:12px;padding:8px" />
+          <button class="btn btn-success" style="width:100%;margin-top:8px" onclick="importFromExcel()">
+            <i class="fa-solid fa-file-import"></i> Import Excel
+          </button>
+        </div>
+      </div>
+      <div id="importPreview" style="display:none;margin-top:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <p style="font-size:13px;font-weight:600"><span id="importQCount">0</span> questions ready to import</p>
+          <button class="btn btn-primary btn-sm" onclick="saveImportedQuestions()"><i
+              class="fa-solid fa-floppy-disk"></i> Save All</button>
+        </div>
+        <div id="importQList" style="max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:6px"></div>
+      </div>
+    </div>
+
+    <!-- EXPORT TAB -->
+    <div id="aqpanel-export" style="display:none">
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Export all questions from this exam to use
+        elsewhere or as a backup.</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="card-inner p-4" style="text-align:center">
+          <i class="fa-solid fa-file-code"
+            style="font-size:32px;color:var(--accent);display:block;margin-bottom:10px"></i>
+          <p style="font-size:13px;font-weight:600;margin-bottom:6px">Export as JSON</p>
+          <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Machine-readable, can be re-imported</p>
+          <button class="btn btn-primary" style="width:100%" onclick="exportQuestionsJson()">
+            <i class="fa-solid fa-download"></i> Download JSON
+          </button>
+        </div>
+        <div class="card-inner p-4" style="text-align:center">
+          <i class="fa-solid fa-file-excel"
+            style="font-size:32px;color:var(--success);display:block;margin-bottom:10px"></i>
+          <p style="font-size:13px;font-weight:600;margin-bottom:6px">Export as Excel</p>
+          <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Human-readable spreadsheet</p>
+          <button class="btn btn-success" style="width:100%" onclick="exportQuestionsExcel()">
+            <i class="fa-solid fa-download"></i> Download Excel
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ══ EDIT EXAM MODAL ══ -->
+<div id="editExamModal" class="modal-backdrop">
+  <div class="modal-box card p-5" style="max-width:600px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h3 style="font-size:15px;font-weight:600"><i class="fa-solid fa-pen-to-square mr-2"
+          style="color:var(--accent)"></i>Edit Exam Settings</h3>
+      <button onclick="closeModal('editExamModal')"
+        style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px"><i
+          class="fa-solid fa-xmark"></i></button>
+    </div>
+    <input type="hidden" id="editExamId" />
+    <div id="editExamFormContent"></div>
+    <button class="btn btn-primary" style="width:100%;padding:11px;margin-top:4px" onclick="saveExamEdit()">
+      <i class="fa-solid fa-save"></i> Save Changes
+    </button>
+  </div>
+</div>
+
+<!-- ══ EDIT QUESTION MODAL ══ -->
+<div id="editQModal" class="modal-backdrop">
+  <div class="modal-box card p-5" style="max-width:560px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h3 style="font-size:15px;font-weight:600">Edit Question</h3>
+      <button onclick="closeModal('editQModal')"
+        style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px"><i
+          class="fa-solid fa-xmark"></i></button>
+    </div>
+    <input type="hidden" id="editQId" />
+    <input type="hidden" id="editQSource" /> <!-- "db" or "ai" -->
+    <input type="hidden" id="editQAiIndex" />
+    <div class="form-group"><label class="form-label">Question Text</label><textarea id="editQText" class="inp"
+        rows="3"></textarea></div>
+    <div class="form-group">
+      <label class="form-label">Options</label>
+      <div id="editQOpts" style="display:flex;flex-direction:column;gap:6px"></div>
+      <button onclick="addEditOpt()"
+        style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:13px;margin-top:6px;font-family:'Sora',sans-serif"><i
+          class="fa-solid fa-plus"></i> Add option</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Correct Answer(s) <span style="color:var(--muted);font-weight:400">(A/B/C… — check all
+          that apply)</span></label>
+      <div id="editQCorrect" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group"><label class="form-label">Hint</label><input type="text" id="editQHint" class="inp"
+          placeholder="Optional hint" /></div>
+      <div class="form-group"><label class="form-label">Timer (seconds, blank=60)</label><input type="number"
+          id="editQTimer" class="inp" placeholder="60" min="10" /></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-secondary" onclick="closeModal('editQModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditQ()">Save Question</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ RESULTS MODAL ══ -->
+<div id="resultsModal" class="modal-backdrop">
+  <div class="modal-box card p-5" style="max-width:760px;max-height:88vh;display:flex;flex-direction:column">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <h3 style="font-size:15px;font-weight:600"><i class="fa-solid fa-trophy mr-2" style="color:var(--gold)"></i>Exam
+        Results</h3>
+      <div style="display:flex;gap:6px;align-items:center">
+        <button class="btn btn-success btn-sm" onclick="exportResultsWithPwd()"><i class="fa-solid fa-file-excel"></i>
+          Export</button>
+        <button onclick="closeModal('resultsModal')"
+          style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px"><i
+            class="fa-solid fa-xmark"></i></button>
+      </div>
+    </div>
+    <!-- Search -->
+    <div style="position:relative;margin-bottom:10px">
+      <i class="fa-solid fa-magnifying-glass"
+        style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;pointer-events:none"></i>
+      <input type="text" id="resultsSearchInput" class="inp"
+        style="padding-left:32px;padding-top:8px;padding-bottom:8px;font-size:13px"
+        placeholder="Search by student name or ID…" oninput="filterResultsSearch(this.value)" />
+    </div>
+    <div style="overflow:auto;flex:1">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th style="cursor:pointer;user-select:none" onclick="sortResults('student_name')">Student <span
+                id="sort_student_name"></span></th>
+            <th>ID</th>
+            <th style="cursor:pointer;user-select:none" onclick="sortResults('final_score')">Score <span
+                id="sort_final_score"></span></th>
+            <th style="cursor:pointer;user-select:none" onclick="sortResults('completed_at')">Completed <span
+                id="sort_completed_at"></span></th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="resultsBody">
+          <tr>
+            <td colspan="6" style="text-align:center;color:var(--muted);padding:32px">No results yet.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Password confirm modal for sensitive result actions -->
+<div id="pwdConfirmModal" class="modal-backdrop">
+  <div class="modal-box card p-5" style="max-width:360px">
+    <h3 style="font-size:15px;font-weight:600;margin-bottom:8px"><i class="fa-solid fa-lock mr-2"
+        style="color:var(--gold)"></i><span id="pwdConfirmTitle">Confirm Action</span></h3>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px" id="pwdConfirmDesc">Enter password to continue.</p>
+    <input type="password" id="pwdConfirmInput" class="inp" placeholder="Enter password" autocomplete="off"
+      onkeydown="if(event.key==='Enter') confirmPwdAction()" />
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeModal('pwdConfirmModal')">Cancel</button>
+      <button class="btn btn-gold" style="flex:1" onclick="confirmPwdAction()"><i class="fa-solid fa-check"></i>
+        Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SHARE MODAL ══ -->
+<div id="shareModal" class="modal-backdrop">
+  <div class="modal-box card p-5" style="max-width:480px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h3 style="font-size:15px;font-weight:600"><i class="fa-solid fa-share-nodes mr-2"
+          style="color:var(--accent)"></i>Share Exam</h3>
+      <button onclick="closeModal('shareModal')"
+        style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px"><i
+          class="fa-solid fa-xmark"></i></button>
+    </div>
+    <p id="shareExamName" style="font-size:13px;color:var(--muted);margin-bottom:14px"></p>
+    <div style="margin-bottom:14px">
+      <label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px">Direct
+        Link</label>
+      <div style="display:flex;gap:6px">
+        <input type="text" id="shareLinkInput" class="inp" style="font-size:12px;font-family:'JetBrains Mono',monospace"
+          readonly />
+        <button class="btn btn-primary btn-sm" onclick="copyShareLink()" style="flex-shrink:0">
+          <i class="fa-solid fa-copy"></i> Copy
+        </button>
+      </div>
+      <p style="font-size:11px;color:var(--muted);margin-top:6px">
+        <i class="fa-solid fa-info-circle mr-1"></i>Students who are not logged in will be redirected to login first,
+        then taken directly to the exam.
+      </p>
+    </div>
+    <div id="shareQrSection" style="text-align:center">
+      <label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:8px">QR Code</label>
+      <div id="shareQrLoading" style="padding:20px;color:var(--muted);font-size:13px">
+        <i class="fa-solid fa-spinner fa-spin mr-2" style="color:var(--accent)"></i>Generating…
+      </div>
+      <img id="shareQrImg"
+        style="display:none;max-width:200px;border-radius:10px;border:1px solid var(--border);padding:8px;background:#fff"
+        alt="QR Code" />
+      <div style="margin-top:10px">
+        <a id="shareQrDownload" download="exam-qr.png" class="btn btn-secondary btn-sm" style="display:none">
+          <i class="fa-solid fa-download"></i> Download QR
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // @ts-nocheck
+  'use strict';
+
+  // ── Sidebar toggle ─────────────────────────────────────────────────────────
+  let _sidebarCollapsed = false;
+
+  function toggleSidebar() {
+    if (window.innerWidth < 1024) {
+      // Mobile: toggle overlay menu
+      const sb = document.getElementById('sidebar');
+      if (sb.classList.contains('open')) closeMobileMenu();
+      else openMobileMenu();
+      return;
+    }
+    _sidebarCollapsed = !_sidebarCollapsed;
+    document.getElementById('sidebar').classList.toggle('collapsed', _sidebarCollapsed);
+    document.getElementById('mainContent').classList.toggle('full', _sidebarCollapsed);
+    document.getElementById('openSidebarBtn').style.display = _sidebarCollapsed ? '' : 'none';
+  }
+  function openMobileMenu() { document.getElementById('sidebar').classList.add('open'); document.getElementById('menuOverlay').classList.add('show'); }
+  function closeMobileMenu() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('menuOverlay').classList.remove('show'); }
+  window.addEventListener('resize', () => {
+    document.getElementById('mobileMenuBtn').style.display = window.innerWidth < 1024 ? '' : 'none';
+    if (window.innerWidth >= 1024) closeMobileMenu();
+  });
+  window.dispatchEvent(new Event('resize'));
+
+  // ── Sections ───────────────────────────────────────────────────────────────
+  function showSection(name) {
+    document.querySelectorAll('.section-panel').forEach(p => p.classList.remove('active'));
+    const sectionEl = document.getElementById('section' + name.charAt(0).toUpperCase() + name.slice(1));
+    if (sectionEl) sectionEl.classList.add('active');
+    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+    const navEl = document.getElementById('nav' + name.charAt(0).toUpperCase() + name.slice(1));
+    if (navEl) navEl.classList.add('active');
+    const titles = { exams: 'My Exams', create: 'Create Exam', examDetail: 'Exam Detail', account: 'My Account' };
+    document.getElementById('pageTitle').textContent = titles[name] || name;
+    if (name === 'create') { try { renderExamForm('createExamForm', null); } catch (e) { } }
+    closeMobileMenu();
+    if (name === 'account') loadTeacherStats();
+  }
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  const HELP_LABELS = {
+    hint: { icon: 'fa-lightbulb', label: 'Hint', defaultCost: 0.5 },
+    remove_wrong: { icon: 'fa-scissors', label: 'Remove 2 Wrong', defaultCost: 1 },
+    ask_ai: { icon: 'fa-robot', label: 'Ask AI', defaultCost: 1 },
+    ask_friend: { icon: 'fa-user-group', label: 'Ask Friend', defaultCost: 1 },
+    change_question: { icon: 'fa-shuffle', label: 'Skip Question', defaultCost: 1 },
+    add_time: { icon: 'fa-clock-rotate-left', label: 'Add 1 min', defaultCost: 1 },
+  };
+
+  function statusBadge(s) { return { open: 'success', upcoming: 'accent', ended: '', inactive: 'danger' }[s] || ''; }
+  function scoreColor(s) { if (s == null) return 'var(--muted)'; if (s >= 8) return 'var(--success)'; if (s >= 5) return 'var(--gold)'; return 'var(--danger)'; }
+  function fmtDt(iso) { if (!iso) return '∞'; const d = new Date(iso); return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
+
+  // ── Exam form renderer (shared by create + edit) ───────────────────────────
+  function renderExamForm(containerId, exam) {
+    const e = exam || {};
+    const ah = e.allowed_helps || Object.keys(HELP_LABELS);
+    const hc = e.help_costs || {};
+
+    function toLocal(iso) {
+      if (!iso) return '';
+      const d = new Date(iso);
+      const pad = n => String(n).padStart(2, '0');
+      return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    }
+
+    // Build help checkboxes using string concat (no nested template literals)
+    let helpHtml = '';
+    Object.entries(HELP_LABELS).forEach(([k, v]) => {
+      const checked = ah.includes(k) ? 'checked' : '';
+      const costVal = hc[k] !== undefined ? hc[k] : v.defaultCost;
+      helpHtml += '<label style="display:flex;align-items:center;gap:8px;padding:9px;background:var(--inp-bg);border:1px solid var(--border);border-radius:9px;cursor:pointer;font-size:13px">'
+        + '<input type="checkbox" id="hc_' + k + '" ' + checked + ' style="accent-color:var(--accent)"/>'
+        + '<i class="fa-solid ' + v.icon + '" style="color:var(--accent);width:14px"></i>'
+        + '<span style="flex:1">' + v.label + '</span>'
+        + '<input type="number" id="hcost_' + k + '" value="' + costVal + '" step="0.5" min="0" max="10"'
+        + ' style="width:48px;padding:3px 6px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;font-family:monospace;text-align:center"/>'
+        + '</label>';
+    });
+
+    const isPublicChecked = e.is_public ? 'checked' : '';
+    const totalMarks = e.total_marks !== undefined ? e.total_marks : 10;
+    const qPerStudent = e.questions_per_student || 1;
+
+    let html = '';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">';
+    html += '<div class="form-group" style="grid-column:1/-1"><label class="form-label">Exam Name *</label>'
+      + '<input type="text" id="fName" class="inp" value="' + escHtml(e.name || '') + '" placeholder="e.g. Midterm Oral Exam"/></div>';
+    html += '<div class="form-group"><label class="form-label">Course Name</label>'
+      + '<input type="text" id="fCourse" class="inp" value="' + escHtml(e.course_name || '') + '" placeholder="e.g. Data Structures"/></div>';
+    html += '<div class="form-group"><label class="form-label">Course Code</label>'
+      + '<input type="text" id="fCode" class="inp" value="' + escHtml(e.course_code || '') + '" placeholder="e.g. CS301"/></div>';
+    html += '<div class="form-group" style="grid-column:1/-1"><label class="form-label">Description</label>'
+      + '<textarea id="fDesc" class="inp" rows="2">' + escHtml(e.description || '') + '</textarea></div>';
+    html += '<div class="form-group"><label class="form-label">Questions per Student</label>'
+      + '<input type="number" id="fQCount" class="inp" value="' + qPerStudent + '" min="1"/></div>';
+    html += '<div class="form-group"><label class="form-label">Start Time</label>'
+      + '<input type="datetime-local" id="fStart" class="inp" value="' + toLocal(e.start_time) + '"/></div>';
+    html += '<div class="form-group"><label class="form-label">End Time</label>'
+      + '<input type="datetime-local" id="fEnd" class="inp" value="' + toLocal(e.end_time) + '"/></div>';
+    html += '</div>';
+
+    // Total marks + public
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0">';
+    html += '<div class="form-group"><label class="form-label">Total Marks</label>'
+      + '<input type="number" id="fTotalMarks" class="inp" value="' + totalMarks + '" min="1" step="0.5"/></div>';
+    html += '<div style="display:flex;align-items:center;gap:8px;padding-top:22px">'
+      + '<input type="checkbox" id="fPublic" ' + isPublicChecked + ' style="accent-color:var(--accent);width:16px;height:16px"/>'
+      + '<label for="fPublic" style="font-size:13px;cursor:pointer">'
+      + '<i class="fa-solid fa-globe mr-1" style="color:var(--accent2)"></i>'
+      + 'Public Exam <span style="color:var(--muted);font-weight:400">(guests join with name only)</span>'
+      + '</label></div>';
+    html += '</div>';
+
+    // Help methods
+    html += '<div style="margin-top:4px"><label class="form-label">Allowed Helping Methods &amp; Costs</label>';
+    html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px">';
+    html += helpHtml;
+    html += '</div></div>';
+
+    document.getElementById(containerId).innerHTML = html;
+  }
+
+  function collectExamFormData() {
+    const allowed = [], costs = {};
+    Object.keys(HELP_LABELS).forEach(k => {
+      if (document.getElementById('hc_' + k)?.checked) allowed.push(k);
+      const ci = document.getElementById('hcost_' + k);
+      if (ci) costs[k] = parseFloat(ci.value) || HELP_LABELS[k].defaultCost;
+    });
+
+    return {
+      name: document.getElementById('fName')?.value.trim() || '',
+      course_name: document.getElementById('fCourse')?.value.trim() || '',
+      course_code: document.getElementById('fCode')?.value.trim() || '',
+      description: document.getElementById('fDesc')?.value.trim() || '',
+      questions_per_student: parseInt(document.getElementById('fQCount')?.value) || 1,
+      start_time: document.getElementById('fStart')?.value || null,
+      end_time: document.getElementById('fEnd')?.value || null,
+      allowed_helps: allowed,
+      help_costs: costs,
+      is_public: document.getElementById('fPublic')?.checked || false,
+      total_marks: parseFloat(document.getElementById('fTotalMarks')?.value) || 10,
+    };
+  }
+
+  // ── Load exams ─────────────────────────────────────────────────────────────
+  let _exams = [];
+
+  async function loadExams() {
+    const data = await api('/api/teacher/exams');
+    if (!data.ok) return;
+    _exams = data.exams;
+    renderExams();
+  }
+
+  function renderExams() {
+    const list = document.getElementById('examsList');
+    const empty = document.getElementById('examsEmpty');
+    document.getElementById('statTotal').textContent = _exams.length;
+    document.getElementById('statOpen').textContent = _exams.filter(e => e.status === 'open').length;
+    document.getElementById('statAttempts').textContent = _exams.reduce((s, e) => s + e.attempt_count, 0);
+
+    if (!_exams.length) { list.innerHTML = ''; empty.style.display = ''; return; }
+    empty.style.display = 'none';
+    list.innerHTML = _exams.map(e => `
+    <div class="exam-card" onclick="openExamDetail(${e.id})">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+        <div style="min-width:0;flex:1">
+          <p style="font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(e.name)}</p>
+          <p style="font-size:12px;color:var(--muted);margin-top:2px">${escHtml(e.course_name)}${e.course_code ? ' · ' + escHtml(e.course_code) : ''}</p>
+        </div>
+        <span class="badge badge-${statusBadge(e.status)}" style="margin-left:8px;flex-shrink:0">${e.status}</span>
+      </div>
+      <div style="display:flex;gap:12px;font-size:12px;color:var(--muted);flex-wrap:wrap">
+        <span><i class="fa-solid fa-question-circle mr-1"></i>${e.question_count}q</span>
+        <span><i class="fa-solid fa-users mr-1"></i>${e.attempt_count}</span>
+        <span><i class="fa-solid fa-list-check mr-1"></i>${e.questions_per_student}/student</span>
+      </div>
+      ${e.start_time || e.end_time ? `<p style="font-size:11px;color:var(--muted);margin-top:8px"><i class="fa-solid fa-clock mr-1"></i>${fmtDt(e.start_time)} → ${fmtDt(e.end_time)}</p>` : ''}
+    </div>`).join('');
+  }
+
+  // ── Create exam ────────────────────────────────────────────────────────────
+  async function createExam() {
+    const body = collectExamFormData();
+    if (!body.name) { toast('Exam name is required.', 'error'); return; }
+    const data = await api('/api/teacher/exams', body);
+    if (!data.ok) { toast(data.error, 'error'); return; }
+    toast('Exam created!', 'success');
+    await loadExams();
+    await openExamDetail(data.exam.id);
+  }
+
+  // ── Detail tab switcher ───────────────────────────────────────────────────────
+  function switchDetailTab(tab) {
+    ['questions', 'helps'].forEach(t => {
+      const btn = document.getElementById('dtab-' + t);
+      const panel = document.getElementById('dtab-' + t + '-panel');
+      if (btn) {
+        btn.style.background = t === tab ? 'var(--surface)' : 'transparent';
+        btn.style.color = t === tab ? 'var(--accent)' : 'var(--muted)';
+        btn.style.boxShadow = t === tab ? 'var(--shadow)' : 'none';
+      }
+      if (panel) panel.style.display = t === tab ? '' : 'none';
+    });
+  }
+
+  // ── Exam detail ────────────────────────────────────────────────────────────
+  let _currentExamId = null;
+
+  async function openExamDetail(examId) {
+    _currentExamId = examId;
+    const data = await api('/api/teacher/exams/' + examId);
+    if (!data.ok) { toast(data.error, 'error'); return; }
+    const exam = data.exam;
+    showSection('examDetail');
+
+    document.getElementById('examDetailContent').innerHTML = `
+    <div class="card p-5" style="margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:16px">
+        <div>
+          <h2 style="font-size:20px;font-weight:700">${escHtml(exam.name)}</h2>
+          <p style="font-size:13px;color:var(--muted);margin-top:3px">${escHtml(exam.course_name)}${exam.course_code ? ' · ' + escHtml(exam.course_code) : ''}</p>
+          ${exam.description ? `<p style="font-size:13px;color:var(--text2);margin-top:6px">${escHtml(exam.description)}</p>` : ''}
+        </div>
+        <span class="badge badge-${statusBadge(exam.status)}" style="font-size:13px;padding:5px 14px;flex-shrink:0">${exam.status}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:16px">
+        <div style="background:var(--hover-bg);padding:10px 14px;border-radius:10px"><p style="font-size:11px;color:var(--muted)">Qs / student</p><p style="font-size:20px;font-weight:700;color:var(--accent)">${exam.questions_per_student}</p></div>
+        <div style="background:var(--hover-bg);padding:10px 14px;border-radius:10px"><p style="font-size:11px;color:var(--muted)">Total Qs</p><p style="font-size:20px;font-weight:700;color:var(--accent2)">${exam.question_count}</p></div>
+        <div style="background:var(--hover-bg);padding:10px 14px;border-radius:10px"><p style="font-size:11px;color:var(--muted)">Attempts</p><p style="font-size:20px;font-weight:700;color:var(--gold)">${exam.attempt_count}</p></div>
+        <div style="background:var(--hover-bg);padding:10px 14px;border-radius:10px"><p style="font-size:11px;color:var(--muted)">Start</p><p style="font-size:12px;font-weight:600;margin-top:2px">${fmtDt(exam.start_time)}</p></div>
+        <div style="background:var(--hover-bg);padding:10px 14px;border-radius:10px"><p style="font-size:11px;color:var(--muted)">End</p><p style="font-size:12px;font-weight:600;margin-top:2px">${fmtDt(exam.end_time)}</p></div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-secondary btn-sm" onclick="openEditExamModal(${examId})"><i class="fa-solid fa-pen-to-square"></i> Edit</button>
+        <button class="btn btn-secondary btn-sm" onclick="loadResults(${examId})"><i class="fa-solid fa-trophy"></i> Results (${exam.attempt_count})</button>
+        <button class="btn btn-secondary btn-sm" onclick="openShareModal(${examId})"><i class="fa-solid fa-share-nodes"></i> Share / QR</button>
+        <button class="btn btn-${exam.is_active ? 'danger' : 'success'} btn-sm" onclick="toggleActive(${examId},${exam.is_active})">
+          <i class="fa-solid fa-${exam.is_active ? 'ban' : 'check'}"></i> ${exam.is_active ? 'Deactivate' : 'Activate'}
+        </button>
+        <button class="btn btn-danger btn-sm" onclick="deleteExam(${examId})"><i class="fa-solid fa-trash"></i> Delete</button>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:4px;background:var(--bg2);border-radius:10px;padding:4px;margin-bottom:16px;width:fit-content">
+      <button id="dtab-questions" onclick="switchDetailTab('questions')"
+        style="padding:7px 20px;border:none;border-radius:8px;font-family:'Sora',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;background:var(--surface);color:var(--accent);box-shadow:var(--shadow)">
+        <i class="fa-solid fa-question-circle mr-1"></i>Questions
+      </button>
+
+    </div>
+
+    <div id="dtab-questions-panel">
+      <div class="card p-5">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+            <h3 style="font-size:15px;font-weight:600">Questions (${exam.question_count})</h3>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <button class="btn btn-primary btn-sm" onclick="openAddQModal(${examId})"><i class="fa-solid fa-plus"></i> Add Question</button>
+              <button class="btn btn-secondary btn-sm" onclick="directExportJson(${examId})"><i class="fa-solid fa-file-code"></i> JSON</button>
+              <button class="btn btn-success btn-sm" onclick="directExportExcel(${examId})"><i class="fa-solid fa-file-excel"></i> Excel</button>
+              <button class="btn btn-danger btn-sm" onclick="clearQuestions(${examId})"><i class="fa-solid fa-trash"></i></button>
+            </div>
+          </div>
+        <div style="position:relative;margin-bottom:12px">
+          <i class="fa-solid fa-magnifying-glass" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:12px;pointer-events:none"></i>
+          <input type="text" id="qSearchInput" class="inp" style="padding-left:32px;padding-top:8px;padding-bottom:8px;font-size:13px" placeholder="Search questions…" oninput="filterQuestions(this.value)"/>
+        </div>
+        ${exam.questions.length ? renderQMarks(exam) : ''}
+        <div id="questionsAccordion">${renderQAccordion(exam.questions)}</div>
+      </div>
+    </div>
+
+  `;
+
+  }
+
+  function renderQMarks(exam) {
+    var qm = exam.question_marks || {};
+    var def_m = exam.questions.length ? (exam.total_marks / exam.questions.length).toFixed(2) : exam.total_marks;
+    var html = '<div style="background:var(--hover-bg);border-radius:10px;padding:12px;margin-bottom:14px">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">';
+    html += '<p style="font-size:12px;font-weight:600"><i class="fa-solid fa-star mr-1" style="color:var(--gold)"></i>Per-question marks <span style="font-weight:400;color:var(--muted)">(default ' + parseFloat(def_m) + ' each)</span></p>';
+    html += '<button class="btn btn-primary btn-sm" onclick="saveQuestionMarks(' + exam.id + ')"><i class="fa-solid fa-save"></i> Save Marks</button>';
+    html += '</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px">';
+    exam.questions.forEach(function (q, i) {
+      var val = qm[String(q.id)] !== undefined ? qm[String(q.id)] : parseFloat(def_m);
+      html += '<div style="display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 10px">';
+      html += '<span style="font-size:11px;color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + escHtml(q.text) + '">' + (i + 1) + '. ' + escHtml(q.text.substring(0, 28)) + (q.text.length > 28 ? '&hellip;' : '') + '</span>';
+      html += '<input type="number" id="qmark-' + q.id + '" value="' + val + '" step="0.5" min="0" style="width:54px;padding:4px 6px;border-radius:6px;border:1px solid var(--border);background:var(--inp-bg);color:var(--text);font-size:12px;font-family:monospace;text-align:center"/>';
+      html += '</div>';
+    });
+    html += '</div></div>';
+    return html;
+  }
+
+  function renderQAccordion(questions) {
+    if (!questions || !questions.length)
+      return '<p style="text-align:center;color:var(--muted);padding:24px;font-size:13px">No questions yet. Click Add Question to add some.</p>';
+    return questions.map(function (q, i) {
+      var optBadges = q.options.map(function (o, oi) {
+        var ok = (q.correct_answers || []).includes(o);
+        return '<span style="display:inline-flex;align-items:center;gap:3px;font-size:11px;padding:2px 8px;border-radius:6px;border:1px solid ' + (ok ? 'var(--success-bdr)' : 'var(--border)') + ';background:' + (ok ? 'var(--success-bg)' : 'transparent') + ';color:' + (ok ? 'var(--success)' : 'var(--muted)') + ';">' + (ok ? '<i class="fa-solid fa-check" style="font-size:9px;margin-right:2px"></i>' : '') + String.fromCharCode(65 + oi) + '. ' + escHtml(o) + '</span>';
+      }).join('');
+      var timerBadge = q.timer_seconds ? '<span class="badge badge-accent" style="font-size:10px"><i class="fa-solid fa-clock"></i> ' + q.timer_seconds + 's</span>' : '';
+      var multiBadge = q.multi_answer ? '<span class="badge badge-warn" style="font-size:10px"><i class="fa-solid fa-check-double"></i> Multi</span>' : '';
+      var hintIcon = q.hint ? '<span style="font-size:10px;color:var(--muted)" title="' + escHtml(q.hint) + '"><i class="fa-solid fa-lightbulb" style="color:var(--gold);margin-left:4px"></i></span>' : '';
+      var editData = JSON.stringify(q).replace(/'/g, "&#39;");
+      return '<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)" id="qrow-' + q.id + '">'
+        + '<span style="font-size:11px;color:var(--muted);font-weight:600;min-width:22px;margin-top:2px">' + (i + 1) + '.</span>'
+        + '<div style="flex:1;min-width:0">'
+        + '<p style="font-size:13px;font-weight:500;color:var(--text2);margin-bottom:5px;line-height:1.4">' + escHtml(q.text) + '</p>'
+        + '<div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center">' + optBadges + timerBadge + multiBadge + hintIcon + '</div>'
+        + '</div>'
+        + '<div style="display:flex;gap:4px;flex-shrink:0">'
+        + '<button class="btn btn-secondary btn-sm" style="padding:4px 8px" onclick="openEditQDb(' + editData + ')"><i class="fa-solid fa-pen-to-square"></i></button>'
+        + '<button class="btn btn-danger btn-sm" style="padding:4px 8px" onclick="deleteQ(' + q.id + ')"><i class="fa-solid fa-trash"></i></button>'
+        + '</div>'
+        + '</div>';
+    }).join('');
+  }
+
+  function toggleQ(id) {
+    const e = document.getElementById('qexpand-' + id);
+    const c = document.getElementById('qchev-' + id);
+    const open = e?.classList.contains('open');
+    e?.classList.toggle('open', !open);
+    if (c) c.style.transform = open ? '' : 'rotate(90deg)';
+  }
+
+  // ── Edit exam settings ─────────────────────────────────────────────────────
+  async function openEditExamModal(examId) {
+    const data = await api('/api/teacher/exams/' + examId);
+    if (!data.ok) { toast(data.error, 'error'); return; }
+    document.getElementById('editExamId').value = examId;
+    renderExamForm('editExamFormContent', data.exam);
+    openModal('editExamModal');
+  }
+
+  async function saveExamEdit() {
+    const examId = document.getElementById('editExamId').value;
+    const body = collectExamFormData();
+    if (!body.name) { toast('Exam name is required.', 'error'); return; }
+    const data = await api('/api/teacher/exams/' + examId, body, 'PUT');
+    if (!data.ok) { toast(data.error, 'error'); return; }
+    toast('Exam updated.', 'success');
+    closeModal('editExamModal');
+    await loadExams();
+    await openExamDetail(parseInt(examId));
+  }
+
+  // ── Toggle active / delete exam ────────────────────────────────────────────
+  async function toggleActive(examId, isActive) {
+    const data = await api('/api/teacher/exams/' + examId, { is_active: !isActive }, 'PUT');
+    if (!data.ok) { toast(data.error, 'error'); return; }
+    toast(isActive ? 'Deactivated.' : 'Activated.', 'success');
+    await loadExams(); await openExamDetail(examId);
+  }
+
+  async function deleteExam(examId) {
+    if (!confirm('Permanently delete this exam and all results?')) return;
+    const data = await api('/api/teacher/exams/' + examId, {}, 'DELETE');
+    if (!data.ok) { toast(data.error, 'error'); return; }
+    toast('Deleted.', 'info'); await loadExams(); showSection('exams');
+  }
+
+  // ── AI Import ──────────────────────────────────────────────────────────────
+  let _aiQuestions = [], _aiExamId = null;
+
+  function openAiModal(examId) {
+    _aiExamId = examId; _aiQuestions = [];
+    document.getElementById('aiPreview').style.display = 'none';
+    document.getElementById('aiLoading').style.display = 'none';
+    document.getElementById('aiText').value = '';
+    document.getElementById('aiFileName').style.display = 'none';
+    document.getElementById('aiFileBtn').disabled = true;
+    openModal('aiModal');
+  }
+  function onAiFile(input) {
+    const f = input.files[0]; if (!f) return;
+    const el = document.getElementById('aiFileName');
+    el.textContent = f.name; el.style.display = '';
+    document.getElementById('aiFileBtn').disabled = false;
+  }
+  async function processAiFile() {
+    const input = document.getElementById('aiFile'); if (!input.files[0]) return;
+    document.getElementById('aiLoading').style.display = ''; document.getElementById('aiPreview').style.display = 'none';
+    const instr = document.getElementById('aiInstructions')?.value.trim() || '';
+    const fd = new FormData(); fd.append('file', input.files[0]); if (instr) fd.append('instructions', instr);
+    const data = await apiForm('/api/teacher/ai/upload', fd);
+    document.getElementById('aiLoading').style.display = 'none';
+    if (!data.ok) { toast(data.error, 'error'); return; }
+    showAiPreview(data.questions);
+  }
+  async function processAiText() {
+    const text = document.getElementById('aiText').value.trim();
+    if (!text) { toast('Please enter some text.', 'error'); return; }
+    document.getElementById('aiLoading').style.display = ''; document.getElementById('aiPreview').style.display = 'none';
+    const instructions = document.getElementById('aiInstructions')?.value.trim() || '';
+    const data = await api('/api/teacher/ai/text', { text, instructions });
+    document.getElementById('aiLoading').style.display = 'none';
+    if (!data.ok) { toast(data.error, 'error'); return; }
+    showAiPreview(data.questions);
+  }
+
+  function showAiPreview(questions) {
+    _aiQuestions = questions.map(q => ({ ...q, correct_answers: q.correct_answers || [q.correct_answer || ''].filter(Boolean) }));
+    renderAiPreview();
+    document.getElementById('aiPreview').style.display = '';
+  }
+
+  function renderAiPreview() {
+    document.getElementById('aiQCount').textContent = _aiQuestions.length;
+    const list = document.getElementById('aiQList');
+    list.innerHTML = _aiQuestions.map((q, idx) => `
+    <div style="background:var(--inp-bg);border:1px solid var(--border);border-radius:10px;padding:12px" id="aiq-${idx}">
+      <div style="display:flex;gap:6px;align-items:flex-start;margin-bottom:8px">
+        <span style="font-size:12px;color:var(--muted);font-weight:600;width:22px;flex-shrink:0;margin-top:2px">${idx + 1}.</span>
+        <textarea style="flex:1;background:transparent;border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-family:'Sora',sans-serif;font-size:13px;resize:vertical;min-height:40px"
+          oninput="_aiQuestions[${idx}].text=this.value">${escHtml(q.text)}</textarea>
+        <button onclick="removeAiQ(${idx})" style="background:none;border:none;color:var(--danger);cursor:pointer;flex-shrink:0;margin-top:2px"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div style="padding-left:28px">
+        <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:6px" id="aiq-opts-${idx}">
+          ${q.options.map((o, oi) => `
+            <div style="display:flex;gap:6px;align-items:center">
+              <span style="font-size:11px;color:var(--muted);width:16px;flex-shrink:0">${String.fromCharCode(65 + oi)}.</span>
+              <input type="text" value="${escHtml(o)}" style="flex:1;background:${(q.correct_answers || []).includes(o) ? 'var(--success-bg)' : 'var(--inp-bg)'};border:1px solid ${(q.correct_answers || []).includes(o) ? 'var(--success-bdr)' : 'var(--border)'};border-radius:5px;padding:4px 8px;color:var(--text);font-family:'Sora',sans-serif;font-size:12px"
+                oninput="_aiQuestions[${idx}].options[${oi}]=this.value;refreshAiOptColors(${idx})"
+                id="aiq-${idx}-opt-${oi}"/>
+              <button onclick="removeAiOpt(${idx},${oi})" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:11px"><i class="fa-solid fa-xmark"></i></button>
+            </div>`).join('')}
+          <button onclick="addAiOpt(${idx})" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:11px;font-family:'Sora',sans-serif;text-align:left;margin-top:2px">
+            <i class="fa-solid fa-plus"></i> Add option
+          </button>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="font-size:11px;color:var(--muted)">Correct:</span>
+          <div style="display:flex;gap:4px;flex-wrap:wrap" id="aiq-correct-${idx}">
+            ${q.options.map((o, oi) => `
+              <label style="display:flex;align-items:center;gap:3px;padding:3px 8px;border-radius:7px;border:1px solid var(--border);cursor:pointer;font-size:11px;font-weight:600;background:var(--inp-bg)">
+                <input type="checkbox" value="${escHtml(o)}" ${(q.correct_answers || []).includes(o) ? 'checked' : ''}
+                  style="accent-color:var(--accent)" onchange="updateAiCorrect(${idx})"/>
+                ${String.fromCharCode(65 + oi)}
+              </label>`).join('')}
+          </div>
+          <input type="number" value="${q.timer_seconds || ''}" placeholder="Timer(s)" min="10"
+            style="width:72px;padding:3px 8px;border-radius:6px;border:1px solid var(--border);background:var(--inp-bg);color:var(--text);font-size:12px;font-family:'JetBrains Mono',monospace"
+            oninput="_aiQuestions[${idx}].timer_seconds=this.value?parseInt(this.value):null"/>
+        </div>
+      </div>
+    </div>`).join('');
+  }
+
+  function refreshAiOptColors(idx) {
+    const q = _aiQuestions[idx];
+    q.options.forEach((o, oi) => {
+      const inp = document.getElementById(`aiq-${idx}-opt-${oi}`);
+      if (!inp) return;
+      const isCorrect = (q.correct_answers || []).includes(o);
+      inp.style.background = isCorrect ? 'var(--success-bg)' : 'var(--inp-bg)';
+      inp.style.borderColor = isCorrect ? 'var(--success-bdr)' : 'var(--border)';
+    });
+  }
+
+  function updateAiCorrect(idx) {
+    const div = document.getElementById(`aiq-correct-${idx}`);
+    _aiQuestions[idx].correct_answers = Array.from(div.querySelectorAll('input:checked')).map(c => c.value);
+    refreshAiOptColors(idx);
+  }
+  function removeAiQ(idx) { _aiQuestions.splice(idx, 1); renderAiPreview(); }
+  function addAiBlankQ() { _aiQuestions.push({ text: '', options: ['Option A', 'Option B', 'Option C'], correct_answers: ['Option A'], hint: '', timer_seconds: null }); renderAiPreview(); }
+  function addAiOpt(idx) { _aiQuestions[idx].options.push('New option'); renderAiPreview(); }
+  function removeAiOpt(idx, oi) { if (_aiQuestions[idx].options.length <= 2) { toast('Need at least 2 options.', 'error'); return; } _aiQuestions[idx].options.splice(oi, 1); renderAiPreview(); }
+
+  async function saveAiQuestions() {
+    if (!_aiQuestions.length || !_aiExamId) return;
+    const data = await api('/api/teacher/exams/' + _aiExamId + '/questions', { questions: _aiQuestions });
+    if (!data.ok) { toast(data.error, 'error'); return; }
+    toast('Saved ' + data.added + ' questions.', 'success');
+    closeModal('aiModal');
+    await openExamDetail(_aiExamId);
+  }
+
+  // ── Edit question (DB) ─────────────────────────────────────────────────────
+  function openEditQDb(q) {
+    document.getElementById('editQId').value = q.id;
+    document.getElementById('editQSource').value = 'db';
+    document.getElementById('editQText').value = q.text;
+    document.getElementById('editQHint').value = q.hint || '';
+    document.getElementById('editQTimer').value = q.timer_seconds || '';
+    renderEditQOpts(q.options, q.correct_answers || []);
+    openModal('editQModal');
+  }
+
+  function renderEditQOpts(options, correctAnswers) {
+    document.getElementById('editQOpts').innerHTML = options.map((o, i) => `
+    <div style="display:flex;gap:6px;align-items:center">
+      <span style="color:var(--muted);font-size:12px;width:18px">${String.fromCharCode(65 + i)}.</span>
+      <input type="text" value="${escHtml(o)}" class="inp" style="flex:1;padding:6px 10px"
+        oninput="updateEditQCorrects()" id="editOpt${i}"/>
+      <button onclick="removeEditOpt(${i})" style="background:none;border:none;color:var(--danger);cursor:pointer"><i class="fa-solid fa-xmark"></i></button>
+    </div>`).join('');
+    document.getElementById('editQCorrect').innerHTML = options.map((o, i) => `
+    <label style="display:flex;align-items:center;gap:4px;padding:3px 9px;border-radius:8px;border:1px solid var(--border);cursor:pointer;font-size:12px;font-weight:600;background:var(--inp-bg)">
+      <input type="checkbox" value="${escHtml(o)}" ${correctAnswers.includes(o) ? 'checked' : ''} style="accent-color:var(--accent)" id="editCorrect${i}"/>
+      ${String.fromCharCode(65 + i)}
+    </label>`).join('');
+  }
+
+  function getEditOpts() {
+    const opts = []; let i = 0;
+    while (document.getElementById('editOpt' + i)) { opts.push(document.getElementById('editOpt' + i).value.trim()); i++; }
+    return opts.filter(Boolean);
+  }
+  function updateEditQCorrects() {
+    const opts = getEditOpts();
+    const prev = Array.from(document.getElementById('editQCorrect').querySelectorAll('input:checked')).map(c => c.value);
+    document.getElementById('editQCorrect').innerHTML = opts.map((o, i) => `
+    <label style="display:flex;align-items:center;gap:4px;padding:3px 9px;border-radius:8px;border:1px solid var(--border);cursor:pointer;font-size:12px;font-weight:600;background:var(--inp-bg)">
+      <input type="checkbox" value="${escHtml(o)}" ${prev.includes(o) ? 'checked' : ''} style="accent-color:var(--accent)" id="editCorrect${i}"/>
+      ${String.fromCharCode(65 + i)}
+    </label>`).join('');
+  }
+  function addEditOpt() { const count = getEditOpts().length; const div = document.getElementById('editQOpts'); const row = document.createElement('div'); row.style.cssText = 'display:flex;gap:6px;align-items:center'; row.innerHTML = `<span style="color:var(--muted);font-size:12px;width:18px">${String.fromCharCode(65 + count)}.</span><input type="text" class="inp" style="flex:1;padding:6px 10px" placeholder="New option" oninput="updateEditQCorrects()" id="editOpt${count}"/><button onclick="removeEditOpt(${count})" style="background:none;border:none;color:var(--danger);cursor:pointer"><i class="fa-solid fa-xmark"></i></button>`; div.appendChild(row); updateEditQCorrects(); }
+  function removeEditOpt(idx) { const opts = getEditOpts(); opts.splice(idx, 1); const correct = Array.from(document.getElementById('editQCorrect').querySelectorAll('input:checked')).map(c => c.value); renderEditQOpts(opts, correct); }
+
+  async function saveEditQ() {
+    const id = document.getElementById('editQId').value;
+    const text = document.getElementById('editQText').value.trim();
+    const hint = document.getElementById('editQHint').value.trim();
+    const timer = document.getElementById('editQTimer').value;
+    const opts = getEditOpts();
+    const correct = Array.from(document.getElementById('editQCorrect').querySelectorAll('input:checked')).map(c => c.value);
+    if (!text) { toast('Question text required.', 'error'); return; }
+    if (opts.length < 2) { toast('Need at least 2 options.', 'error'); return; }
+    if (!correct.length) { toast('Select at least one correct answer.', 'error'); return; }
+    const data = await api('/api/teacher/questions/' + id, { text, options: opts, correct_answers: correct, hint, timer_seconds: timer ? parseInt(timer) : null }, 'PUT');
+    if (!data.ok) { toast(data.error, 'error'); return; }
+    toast('Question saved.', 'success'); closeModal('editQModal'); await openExamDetail(_currentExamId);
+  }
+
+  async function deleteQ(id) {
+    if (!confirm('Delete this question?')) return;
+    const data = await api('/api/teacher/questions/' + id, {}, 'DELETE');
+    if (!data.ok) { toast(data.error, 'error'); return; }
+    toast('Deleted.', 'info'); await openExamDetail(_currentExamId);
+  }
+  async function clearQuestions(examId) {
+    if (!confirm('Delete ALL questions from this exam?')) return;
+    await api('/api/teacher/exams/' + examId + '/questions/clear', {});
+    toast('Cleared.', 'info'); await openExamDetail(examId);
+  }
+
+  // ── Results ────────────────────────────────────────────────────────────────
+  let _currentResultsExamId = null, _allResults = [], _sortKey = null, _sortAsc = true;
+
+  async function loadResults(examId) {
+    _currentResultsExamId = examId;
+    const data = await api('/api/teacher/exams/' + examId + '/results');
+    if (!data.ok) { toast(data.error, 'error'); return; }
+    _allResults = data.results; _sortKey = null; _sortAsc = true;
+    const si = document.getElementById('resultsSearchInput'); if (si) si.value = '';
+    ['student_name', 'final_score', 'completed_at'].forEach(k => {
+      const el = document.getElementById('sort_' + k); if (el) el.textContent = '';
+    });
+    renderResultsTable(_allResults);
+    openModal('resultsModal');
+  }
+
+  function renderResultsTable(results) {
+    const tbody = document.getElementById('resultsBody');
+    if (!results.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px">No results yet.</td></tr>'; return; }
+    tbody.innerHTML = results.map((r, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td style="font-weight:500">${escHtml(r.student_name)}</td>
+      <td style="color:var(--muted)">${escHtml(r.student_id)}</td>
+      <td><span style="font-family:'JetBrains Mono',monospace;font-weight:700;color:${scoreColor(r.final_score)}">${r.final_score ?? '–'}</span>/10
+        ${r.score_override != null ? '<span class="badge badge-warn ml-1" style="font-size:10px">edited</span>' : ''}
+      </td>
+      <td style="color:var(--muted);white-space:nowrap;font-size:12px">${r.completed_at || '–'}</td>
+      <td>
+        <div style="display:flex;gap:4px">
+          <button class="btn btn-secondary btn-sm" style="padding:3px 7px" onclick="overrideScoreWithPwd(${r.id},${r.final_score})"><i class="fa-solid fa-pen-to-square"></i></button>
+          <button class="btn btn-danger btn-sm" style="padding:3px 7px" onclick="deleteResultWithPwd(${r.id})"><i class="fa-solid fa-trash"></i></button>
+        </div>
+      </td>
+    </tr>`).join('');
+  }
+
+  function sortResults(key) {
+    _sortAsc = (_sortKey === key) ? !_sortAsc : true; _sortKey = key;
+    ['student_name', 'final_score', 'completed_at'].forEach(k => {
+      const el = document.getElementById('sort_' + k);
+      if (el) el.textContent = k === _sortKey ? (_sortAsc ? '↑' : '↓') : '';
+    });
+    const sorted = [..._allResults].sort((a, b) => {
+      let av = a[key], bv = b[key];
+      if (key === 'final_score') { av = av ?? -1; bv = bv ?? -1; }
+      if (av == null && bv == null) return 0; if (av == null) return 1; if (bv == null) return -1;
+      const cmp = typeof av === 'string' ? av.localeCompare(bv) : av - bv;
+      return _sortAsc ? cmp : -cmp;
+    });
+    renderResultsTable(sorted);
+  }
+
+
+  async function overrideScore(attemptId, current) {
+    const val = prompt('Enter new score (0–10):', current ?? ''); if (val === null) return;
+    const score = parseFloat(val); if (isNaN(score) || score < 0 || score > 10) { toast('Invalid score.', 'error'); return; }
+    const data = await api('/api/teacher/attempts/' + attemptId + '/override', { score });
+    if (!data.ok) { toast(data.error, 'error'); return; }
+    toast('Updated.', 'success'); await loadResults(_currentResultsExamId);
+  }
+  async function deleteResult(attemptId) {
+    if (!confirm('Delete this result?')) return;
+    const data = await api('/api/teacher/attempts/' + attemptId, {}, 'DELETE');
+    if (data.ok) { toast('Deleted.', 'info'); await loadResults(_currentResultsExamId); }
+  }
+
+  // ── Account ────────────────────────────────────────────────────────────────
+  async function loadTeacherStats() {
+    const data = await api('/api/teacher/stats');
+    if (!data.ok) return;
+    document.getElementById('ts_exams').textContent = data.total_exams;
+    document.getElementById('ts_active').textContent = data.active_exams;
+    document.getElementById('ts_attempts').textContent = data.total_attempts;
+    document.getElementById('ts_students').textContent = data.unique_students;
+    document.getElementById('ts_avg').textContent = data.avg_score ?? '–';
+    document.getElementById('statStudents').textContent = data.unique_students;
+  }
+
+  async function updateTeacherProfile() {
+    const full_name = document.getElementById('tFullName').value.trim();
+    const email = document.getElementById('tEmail').value.trim();
+    if (!full_name || !email) { toast('All fields required.', 'error'); return; }
+    const data = await api('/api/teacher/update_profile', { full_name, email });
+    if (!data.ok) { toast(data.error, 'error'); return; }
+    toast('Profile updated.', 'success');
+    document.getElementById('sidebarName').textContent = full_name;
+  }
+
+  async function changeTeacherPassword() {
+    const current_password = document.getElementById('tCurrPwd').value;
+    const new_password = document.getElementById('tNewPwd').value;
+    if (!current_password || !new_password) { toast('Fill in both fields.', 'error'); return; }
+    const data = await api('/api/teacher/change_password', { current_password, new_password });
+    if (!data.ok) { toast(data.error, 'error'); return; }
+    toast('Password changed.', 'success');
+    document.getElementById('tCurrPwd').value = '';
+    document.getElementById('tNewPwd').value = '';
+  }
+
+  async function deleteTeacherAccount() {
+    const pwd = prompt('Enter your password to confirm account deletion:');
+    if (!pwd) return;
+    const data = await api('/api/teacher/delete_account', { password: pwd });
+    if (!data.ok) { toast(data.error, 'error'); return; }
+    window.location.href = data.redirect || '/';
+  }
+
+  // ── Share modal ───────────────────────────────────────────────────────────────
+  async function openShareModal(examId) {
+    document.getElementById('shareQrLoading').style.display = '';
+    document.getElementById('shareQrImg').style.display = 'none';
+    document.getElementById('shareQrDownload').style.display = 'none';
+    document.getElementById('shareLinkInput').value = '';
+    document.getElementById('shareExamName').textContent = '';
+    openModal('shareModal');
+
+    const data = await api('/api/teacher/exams/' + examId + '/share');
+    if (!data.ok) { toast(data.error, 'error'); return; }
+
+    document.getElementById('shareLinkInput').value = data.link;
+    document.getElementById('shareExamName').textContent = data.exam_name;
+
+    if (data.qr) {
+      const img = document.getElementById('shareQrImg');
+      img.src = data.qr;
+      img.style.display = '';
+      const dl = document.getElementById('shareQrDownload');
+      dl.href = data.qr;
+      dl.style.display = '';
+      document.getElementById('shareQrLoading').style.display = 'none';
+    } else {
+      document.getElementById('shareQrLoading').textContent = 'QR generation requires: pip install "qrcode[pil]"';
+    }
+  }
+
+  function copyShareLink() {
+    const inp = document.getElementById('shareLinkInput');
+    inp.select();
+    navigator.clipboard.writeText(inp.value).then(() => toast('Link copied!', 'success')).catch(() => { document.execCommand('copy'); toast('Link copied!', 'success'); });
+  }
+
+  // ── Add Question modal tabs ───────────────────────────────────────────────
+  let _addQExamId = null;
+  let _importedQuestions = [];
+
+  function openAddQModal(examId) {
+    _addQExamId = examId;
+    _aiQuestions = []; _importedQuestions = [];
+    // reset manual form
+    document.getElementById('mq-text').value = '';
+    document.getElementById('mq-hint').value = '';
+    document.getElementById('mq-timer').value = '';
+    _initManualOpts();
+    // reset AI
+    document.getElementById('aiPreview').style.display = 'none';
+    document.getElementById('aiLoading').style.display = 'none';
+    document.getElementById('aiText').value = '';
+    document.getElementById('aiFileName').style.display = 'none';
+    document.getElementById('aiFileBtn').disabled = true;
+    document.getElementById('importPreview').style.display = 'none';
+    switchAQTab('manual');
+    openModal('addQModal');
+  }
+
+  function switchAQTab(tab) {
+    ['manual', 'ai', 'import', 'export'].forEach(t => {
+      const btn = document.getElementById('aqtab-' + t);
+      const panel = document.getElementById('aqpanel-' + t);
+      if (btn) {
+        btn.style.background = t === tab ? 'var(--surface)' : 'transparent';
+        btn.style.color = t === tab ? 'var(--accent)' : 'var(--muted)';
+        btn.style.boxShadow = t === tab ? 'var(--shadow)' : 'none';
+      }
+      if (panel) panel.style.display = t === tab ? '' : 'none';
+    });
+  }
+
+  // ── Manual question form ──────────────────────────────────────────────────
+  function _initManualOpts() {
+    const div = document.getElementById('mq-opts');
+    div.innerHTML = '';
+    ['', '', '', ''].forEach((_, i) => _addManualOptRow(i));
+    _refreshCorrectBoxes();
+  }
+
+  function _addManualOptRow(idx) {
+    const div = document.getElementById('mq-opts');
+    const existing = div.querySelectorAll('.mq-opt-row').length;
+    const i = idx !== undefined ? idx : existing;
+    const row = document.createElement('div');
+    row.className = 'mq-opt-row';
+    row.style.cssText = 'display:flex;gap:6px;align-items:center';
+    row.innerHTML = `
+    <span style="font-size:12px;color:var(--muted);width:18px;flex-shrink:0">${String.fromCharCode(65 + i)}.</span>
+    <input type="text" class="inp mq-opt-input" style="flex:1;padding:6px 10px;font-size:13px" placeholder="Option ${String.fromCharCode(65 + i)}"
+      oninput="_refreshCorrectBoxes()"/>
+    <button onclick="removeMQOpt(this)" style="background:none;border:none;color:var(--danger);cursor:pointer;flex-shrink:0">
+      <i class="fa-solid fa-xmark"></i>
+    </button>`;
+    div.appendChild(row);
+  }
+
+  function addMQOpt() {
+    const rows = document.getElementById('mq-opts').querySelectorAll('.mq-opt-row');
+    if (rows.length >= 8) { toast('Maximum 8 options.', 'info'); return; }
+    _addManualOptRow();
+    _refreshCorrectBoxes();
+  }
+
+  function removeMQOpt(btn) {
+    const rows = document.getElementById('mq-opts').querySelectorAll('.mq-opt-row');
+    if (rows.length <= 2) { toast('Need at least 2 options.', 'error'); return; }
+    btn.closest('.mq-opt-row').remove();
+    _refreshCorrectBoxes();
+  }
+
+  function _refreshCorrectBoxes() {
+    const inputs = document.getElementById('mq-opts').querySelectorAll('.mq-opt-input');
+    const prevSel = Array.from(document.getElementById('mq-correct').querySelectorAll('input:checked')).map(x => x.value);
+    const opts = Array.from(inputs).map(i => i.value.trim()).filter(Boolean);
+    document.getElementById('mq-correct').innerHTML = opts.map((o, i) => `
+    <label style="display:flex;align-items:center;gap:4px;padding:3px 10px;border-radius:8px;border:1px solid var(--border);cursor:pointer;font-size:12px;font-weight:600;background:var(--inp-bg)">
+      <input type="checkbox" value="${escHtml(o)}" ${prevSel.includes(o) ? 'checked' : ''} style="accent-color:var(--accent)"/>
+      ${String.fromCharCode(65 + i)}
+    </label>`).join('');
+  }
+
+  async function saveManualQuestion() {
+    const text = document.getElementById('mq-text').value.trim();
+    const hint = document.getElementById('mq-hint').value.trim();
+    const timer = document.getElementById('mq-timer').value;
+    const inputs = document.getElementById('mq-opts').querySelectorAll('.mq-opt-input');
+    const options = Array.from(inputs).map(i => i.value.trim()).filter(Boolean);
+    const correct = Array.from(document.getElementById('mq-correct').querySelectorAll('input:checked')).map(c => c.value);
+
+    if (!text) { toast('Question text is required.', 'error'); return; }
+    if (options.length < 2) { toast('Need at least 2 options.', 'error'); return; }
+    if (!correct.length) { toast('Select at least one correct answer.', 'error'); return; }
+    for (const ca of correct) {
+      if (!options.includes(ca)) { toast('Correct answer must match one of the options.', 'error'); return; }
+    }
+
+    const data = await api('/api/teacher/exams/' + _addQExamId + '/questions', {
+      questions: [{ text, options, correct_answers: correct, hint, timer_seconds: timer ? parseInt(timer) : null }]
+    });
+    if (!data.ok) { toast(data.error, 'error'); return; }
+    toast('Question added.', 'success');
+    closeModal('addQModal');
+    await openExamDetail(_addQExamId);
+  }
+
+  // ── Import from JSON ───────────────────────────────────────────────────────
+  async function importFromJson() {
+    const file = document.getElementById('importJsonFile').files[0];
+    if (!file) { toast('Select a JSON file first.', 'error'); return; }
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      const qs = Array.isArray(data) ? data : (data.questions || []);
+      if (!qs.length) { toast('No questions found in file.', 'error'); return; }
+      _importedQuestions = qs.map(q => ({
+        text: q.text || '',
+        options: q.options || [],
+        correct_answers: q.correct_answers || (q.correct_answer ? [q.correct_answer] : []),
+        hint: q.hint || '',
+        timer_seconds: q.timer_seconds || null,
+      }));
+      showImportPreview();
+    } catch (e) { toast('Invalid JSON file: ' + e.message, 'error'); }
+  }
+
+  async function importFromExcel() {
+    const file = document.getElementById('importExcelFile').files[0];
+    if (!file) { toast('Select an Excel file first.', 'error'); return; }
+    try {
+      const buf = await file.arrayBuffer();
+      const XLSX = await import('https://cdn.sheetjs.com/xlsx-0.20.1/package/xlsx.mjs');
+      const wb = XLSX.read(buf);
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws);
+      _importedQuestions = rows.filter(r => r.text).map(r => ({
+        text: String(r.text || '').trim(),
+        options: String(r.options || '').split('|').map(o => o.trim()).filter(Boolean),
+        correct_answers: String(r.correct_answers || r.correct_answer || '').split('|').map(o => o.trim()).filter(Boolean),
+        hint: String(r.hint || '').trim(),
+        timer_seconds: r.timer_seconds ? parseInt(r.timer_seconds) : null,
+      }));
+      if (!_importedQuestions.length) { toast('No valid rows found.', 'error'); return; }
+      showImportPreview();
+    } catch (e) { toast('Could not read Excel file: ' + e.message, 'error'); }
+  }
+
+  function showImportPreview() {
+    document.getElementById('importQCount').textContent = _importedQuestions.length;
+    document.getElementById('importQList').innerHTML = _importedQuestions.map((q, i) => `
+    <div style="background:var(--inp-bg);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:12px">
+      <p style="font-weight:500;margin-bottom:4px">${i + 1}. ${escHtml(q.text)}</p>
+      <div style="display:flex;flex-wrap:wrap;gap:3px">
+        ${q.options.map((o, oi) => `<span class="badge ${(q.correct_answers || []).includes(o) ? 'badge-success' : ''}">${String.fromCharCode(65 + oi)}. ${escHtml(o)}</span>`).join('')}
+      </div>
+    </div>`).join('');
+    document.getElementById('importPreview').style.display = '';
+  }
+
+  async function saveImportedQuestions() {
+    if (!_importedQuestions.length) return;
+    const data = await api('/api/teacher/exams/' + _addQExamId + '/questions', { questions: _importedQuestions });
+    if (!data.ok) { toast(data.error, 'error'); return; }
+    toast('Imported ' + data.added + ' questions.', 'success');
+    closeModal('addQModal');
+    await openExamDetail(_addQExamId);
+  }
+
+  // ── Export questions ───────────────────────────────────────────────────────
+  async function exportQuestionsJson() {
+    const data = await api('/api/teacher/exams/' + _addQExamId + '/questions');
+    if (!data.ok) { toast(data.error, 'error'); return; }
+    const blob = new Blob([JSON.stringify({ questions: data.questions }, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'exam_questions.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  async function exportQuestionsExcel() {
+    window.location.href = '/api/teacher/exams/' + _addQExamId + '/export_questions';
+  }
+
+  // ── Password-protected result actions ─────────────────────────────────────
+  const RESULTS_PASSWORD = '1234';
+  let _pwdCallback = null;
+
+  function requirePassword(title, desc, callback) {
+    document.getElementById('pwdConfirmTitle').textContent = title;
+    document.getElementById('pwdConfirmDesc').textContent = desc;
+    document.getElementById('pwdConfirmInput').value = '';
+    _pwdCallback = callback;
+    openModal('pwdConfirmModal');
+    setTimeout(() => document.getElementById('pwdConfirmInput').focus(), 100);
+  }
+
+  function confirmPwdAction() {
+    const pwd = document.getElementById('pwdConfirmInput').value;
+    if (pwd !== RESULTS_PASSWORD) { toast('Incorrect password.', 'error'); return; }
+    closeModal('pwdConfirmModal');
+    if (_pwdCallback) { _pwdCallback(); _pwdCallback = null; }
+  }
+
+  function exportResultsWithPwd() {
+    requirePassword('Export Results', 'Enter the results password to export.', () => {
+      window.location.href = '/api/teacher/exams/' + _currentResultsExamId + '/export';
+    });
+  }
+
+  // ── Override / delete with password ───────────────────────────────────────
+  function overrideScoreWithPwd(attemptId, current) {
+    requirePassword('Edit Score', 'Enter password to modify this result.', async () => {
+      const val = prompt('Enter new score (0–10):', current ?? '');
+      if (val === null) return;
+      const score = parseFloat(val);
+      if (isNaN(score) || score < 0 || score > 10) { toast('Invalid score.', 'error'); return; }
+      const data = await api('/api/teacher/attempts/' + attemptId + '/override', { score });
+      if (!data.ok) { toast(data.error, 'error'); return; }
+      toast('Score updated.', 'success');
+      await loadResults(_currentResultsExamId);
+    });
+  }
+
+  function deleteResultWithPwd(attemptId) {
+    requirePassword('Delete Result', 'Enter password to delete this result.', async () => {
+      if (!confirm('Permanently delete this result?')) return;
+      const data = await api('/api/teacher/attempts/' + attemptId, {}, 'DELETE');
+      if (data.ok) { toast('Deleted.', 'info'); await loadResults(_currentResultsExamId); }
+    });
+  }
+
+  // ── Search results ─────────────────────────────────────────────────────────
+  function filterResultsSearch(query) {
+    const q = query.trim().toLowerCase();
+    document.getElementById('resultsSearchClear')?.classList.toggle('hidden', !q);
+    if (!q) { renderResultsTable(_allResults); return; }
+    renderResultsTable(_allResults.filter(r =>
+      r.student_name.toLowerCase().includes(q) ||
+      (r.student_id || '').toLowerCase().includes(q)
+    ));
+  }
+
+  // ── Direct export (without opening Add Question modal) ────────────────────
+  async function directExportJson(examId) {
+    const data = await api('/api/teacher/exams/' + examId + '/questions');
+    if (!data.ok) { toast(data.error, 'error'); return; }
+    if (!data.questions.length) { toast('No questions to export.', 'info'); return; }
+    const blob = new Blob([JSON.stringify({ questions: data.questions }, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = 'exam_questions.json'; a.click(); URL.revokeObjectURL(a.href);
+  }
+
+  function directExportExcel(examId) {
+    window.location.href = '/api/teacher/exams/' + examId + '/export_questions';
+  }
+
+  // ── Per-question marks ────────────────────────────────────────────────────
+  async function saveQuestionMarks(examId) {
+    const qm = {};
+    document.querySelectorAll('[id^="qmark-"]').forEach(inp => {
+      const v = parseFloat(inp.value);
+      if (!isNaN(v)) qm[inp.id.replace('qmark-', '')] = v;
+    });
+    const data = await api('/api/teacher/exams/' + examId + '/scoring', { question_marks: qm });
+    if (!data.ok) { toast(data.error, 'error'); return; }
+    toast('Marks saved.', 'success');
+  }
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', () => {
+    try { renderExamForm('createExamForm', null); } catch (e) { console.warn('renderExamForm:', e); }
+    loadExams().then(loadTeacherStats);
+    showSection('{{ open_section if open_section is defined else "exams" }}');
+  });
+</script>
+{% endblock %}

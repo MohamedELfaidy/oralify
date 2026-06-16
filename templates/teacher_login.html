@@ -1,0 +1,310 @@
+{% extends "base.html" %} {% block title %}Teacher Login - Oralify{% endblock %}
+{% block body %}
+<style>
+  .auth-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: var(--bg);
+  }
+
+  .auth-card {
+    width: 100%;
+    max-width: 420px;
+  }
+
+  .tab-switch {
+    display: flex;
+    background: var(--bg2);
+    border-radius: 10px;
+    padding: 4px;
+    margin-bottom: 24px;
+    gap: 4px;
+  }
+
+  .tab-switch button {
+    flex: 1;
+    padding: 8px;
+    border: none;
+    border-radius: 8px;
+    font-family: "Sora", sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--muted);
+    background: transparent;
+  }
+
+  .tab-switch button.active {
+    background: var(--surface);
+    color: var(--accent);
+    box-shadow: var(--shadow);
+  }
+</style>
+
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="card p-8" style="position: relative">
+      <a href="/" style="
+          position: absolute;
+          top: 20px;
+          left: 20px;
+          color: var(--muted);
+          font-size: 13px;
+          text-decoration: none;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        ">
+        <i class="fa-solid fa-arrow-left"></i> Home
+      </a>
+      <button class="theme-toggle" onclick="toggleTheme()" style="position: absolute; top: 16px; right: 16px">
+        <i class="fa-solid fa-moon theme-icon"></i>
+      </button>
+
+      <div style="text-align: center; margin-bottom: 24px; margin-top: 8px">
+        <div style="
+            width: 64px;
+            height: 64px;
+            background: rgba(37, 99, 235, 0.1);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 12px;
+            font-size: 28px;
+            color: var(--accent);
+          ">
+          <i class="fa-solid fa-chalkboard-teacher"></i>
+        </div>
+        <h1 style="font-size: 22px; font-weight: 700" class="gradient-text">
+          Teacher Portal
+        </h1>
+        <p style="color: var(--muted); font-size: 13px; margin-top: 4px">
+          Manage your oral exams
+        </p>
+      </div>
+
+      {% if error %}
+      <div style="
+          background: var(--danger-bg);
+          border: 1px solid var(--danger-bdr);
+          border-radius: 9px;
+          padding: 12px 14px;
+          margin-bottom: 16px;
+          font-size: 13px;
+          color: var(--danger);
+        ">
+        <i class="fa-solid fa-circle-exclamation mr-2"></i>{{ error }}
+      </div>
+      {% endif %}
+
+      <div id="errBox" style="
+          display: none;
+          background: var(--danger-bg);
+          border: 1px solid var(--danger-bdr);
+          border-radius: 9px;
+          padding: 12px 14px;
+          margin-bottom: 16px;
+          font-size: 13px;
+          color: var(--danger);
+        "></div>
+
+      <div class="tab-switch">
+        <button id="tabLogin" class="active" onclick="showTab('login')">
+          Sign In
+        </button>
+        <button id="tabReg" onclick="showTab('register')">Register</button>
+      </div>
+
+      <!-- ── Login form ── -->
+      <div id="loginForm">
+        <div class="form-group">
+          <label class="form-label">Username</label>
+          <div class="inp-group">
+            <i class="fa-solid fa-user inp-icon"></i>
+            <input type="text" id="username" class="inp" placeholder="Enter your username" autocomplete="username" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <div class="inp-group" style="position: relative">
+            <i class="fa-solid fa-lock inp-icon"></i>
+            <input type="password" id="password" class="inp" placeholder="Enter your password"
+              autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()" />
+            <button onclick="togglePwd('password','eyeL')" id="eyeL" style="
+                position: absolute;
+                right: 12px;
+                top: 50%;
+                transform: translateY(-50%);
+                background: none;
+                border: none;
+                color: var(--muted);
+                cursor: pointer;
+                font-size: 14px;
+              ">
+              <i class="fa-solid fa-eye"></i>
+            </button>
+          </div>
+        </div>
+        <button class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 15px" onclick="doLogin()"
+          id="loginBtn">
+          <i class="fa-solid fa-arrow-right-to-bracket"></i> Sign In
+        </button>
+      </div>
+
+      <!-- ── Register form ── -->
+      <div id="registerForm" style="display: none">
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <div class="inp-group">
+            <i class="fa-solid fa-user inp-icon"></i>
+            <input type="text" id="regName" class="inp" placeholder="Your full name" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Username</label>
+          <div class="inp-group">
+            <i class="fa-solid fa-at inp-icon"></i>
+            <input type="text" id="regUsername" class="inp" placeholder="Choose a username" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <div class="inp-group">
+            <i class="fa-solid fa-envelope inp-icon"></i>
+            <input type="email" id="regEmail" class="inp" placeholder="Your email address" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <div class="inp-group" style="position: relative">
+            <i class="fa-solid fa-lock inp-icon"></i>
+            <input type="password" id="regPwd" class="inp" placeholder="At least 6 characters"
+              autocomplete="new-password" onkeydown="if(event.key==='Enter')doRegister()" />
+            <button onclick="togglePwd('regPwd','eyeR')" id="eyeR" style="
+                position: absolute;
+                right: 12px;
+                top: 50%;
+                transform: translateY(-50%);
+                background: none;
+                border: none;
+                color: var(--muted);
+                cursor: pointer;
+                font-size: 14px;
+              ">
+              <i class="fa-solid fa-eye"></i>
+            </button>
+          </div>
+        </div>
+        <button class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 15px" onclick="doRegister()"
+          id="regBtn">
+          <i class="fa-solid fa-user-plus"></i> Create Teacher Account
+        </button>
+      </div>
+
+      <p style="
+          text-align: center;
+          margin-top: 20px;
+          font-size: 13px;
+          color: var(--muted);
+        ">
+        Student?
+        <a href="/student/login" style="color: var(--accent); text-decoration: none; font-weight: 500">Sign in here</a>
+      </p>
+    </div>
+  </div>
+</div>
+
+<script>
+  function showTab(tab) {
+    document.getElementById("loginForm").style.display =
+      tab === "login" ? "" : "none";
+    document.getElementById("registerForm").style.display =
+      tab === "register" ? "" : "none";
+    document
+      .getElementById("tabLogin")
+      .classList.toggle("active", tab === "login");
+    document
+      .getElementById("tabReg")
+      .classList.toggle("active", tab === "register");
+    document.getElementById("errBox").style.display = "none";
+  }
+
+  function showErr(msg) {
+    const b = document.getElementById("errBox");
+    b.innerHTML =
+      '<i class="fa-solid fa-circle-exclamation mr-2"></i>' + escHtml(msg);
+    b.style.display = "block";
+  }
+
+  function togglePwd(inputId, btnId) {
+    const inp = document.getElementById(inputId),
+      btn = document.getElementById(btnId);
+    const hidden = inp.type === "password";
+    inp.type = hidden ? "text" : "password";
+    btn.innerHTML = hidden
+      ? '<i class="fa-solid fa-eye-slash"></i>'
+      : '<i class="fa-solid fa-eye"></i>';
+  }
+
+  async function doLogin() {
+    const username = document.getElementById("username").value.trim();
+    const password = document.getElementById("password").value;
+    if (!username || !password) {
+      showErr("Please fill in all fields.");
+      return;
+    }
+    const btn = document.getElementById("loginBtn");
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Signing in…';
+    const data = await api("/teacher/login", { username, password });
+    if (data.ok) {
+      window.location.href = data.redirect;
+    } else {
+      showErr(data.error);
+      btn.disabled = false;
+      btn.innerHTML =
+        '<i class="fa-solid fa-arrow-right-to-bracket"></i> Sign In';
+    }
+  }
+
+  async function doRegister() {
+    const full_name = document.getElementById("regName").value.trim();
+    const username = document.getElementById("regUsername").value.trim();
+    const email = document.getElementById("regEmail").value.trim();
+    const password = document.getElementById("regPwd").value;
+    if (!full_name || !username || !email || !password) {
+      showErr("All fields are required.");
+      return;
+    }
+    if (password.length < 6) {
+      showErr("Password must be at least 6 characters.");
+      return;
+    }
+    const btn = document.getElementById("regBtn");
+    btn.disabled = true;
+    btn.innerHTML =
+      '<i class="fa-solid fa-spinner fa-spin"></i> Creating account…';
+    const data = await api("/teacher/register", {
+      full_name,
+      username,
+      email,
+      password,
+    });
+    if (data.ok) {
+      window.location.href = data.redirect;
+    } else {
+      showErr(data.error);
+      btn.disabled = false;
+      btn.innerHTML =
+        '<i class="fa-solid fa-user-plus"></i> Create Teacher Account';
+    }
+  }
+
+  if (window.location.hash === "#register") showTab("register");
+</script>
+{% endblock %}

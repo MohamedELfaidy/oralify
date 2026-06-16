@@ -1,0 +1,465 @@
+{% extends "base.html" %}
+{% block title %}{{ exam.name }} – Oralify{% endblock %}
+{% block body %}
+<style>
+  .exam-shell {
+    min-height: 100vh;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column
+  }
+
+  .exam-topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 30
+  }
+
+  .exam-body {
+    flex: 1;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 24px 16px
+  }
+
+  .exam-wrap {
+    width: 100%;
+    max-width: 640px
+  }
+
+  .step {
+    display: none
+  }
+
+  .step.active {
+    display: block
+  }
+</style>
+<div class="exam-shell">
+  <div id="examMeta" data-exam-id="{{ exam.id }}" data-total-marks="{{ exam.total_marks }}" style="display:none"></div>
+  <div class="exam-topbar">
+    <div style="display:flex;align-items:center;gap:10px;min-width:0">
+      <a href="/public"><svg class="logo-icon" width="24" height="24" viewBox="0 0 36 36" fill="none">
+          <circle cx="18" cy="18" r="17" stroke="var(--accent)" stroke-width="1.5" />
+          <path d="M10 22 Q18 8 26 22" stroke="var(--accent2)" stroke-width="2" stroke-linecap="round" fill="none" />
+          <circle cx="18" cy="24" r="3" fill="var(--accent)" />
+        </svg></a>
+      <div style="min-width:0">
+        <p style="font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ exam.name
+          }}</p>
+        <p style="font-size:11px;color:var(--muted)">{{ exam.course_name }}{% if exam.course_code %} · {{
+          exam.course_code }}{% endif %} · {{ exam.teacher_name }}</p>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+      <div style="position:relative;width:52px;height:52px">
+        <svg style="position:absolute;inset:0;transform:rotate(-90deg)" width="52" height="52" viewBox="0 0 52 52">
+          <circle cx="26" cy="26" r="21" fill="none" stroke="var(--border)" stroke-width="4" />
+          <circle id="timerRing" cx="26" cy="26" r="21" fill="none" stroke="var(--accent)" stroke-width="4"
+            stroke-linecap="round" stroke-dasharray="131.9" stroke-dashoffset="0"
+            style="transition:stroke-dashoffset .9s linear" />
+        </svg>
+        <span id="timerText"
+          style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700">60</span>
+      </div>
+      <div style="text-align:right">
+        <p style="font-size:10px;color:var(--muted)">Score</p>
+        <p id="scoreDisplay"
+          style="font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;color:var(--gold)">{{
+          exam.total_marks }}</p>
+      </div>
+      <button class="theme-toggle" onclick="toggleTheme()"><i class="fa-solid fa-moon theme-icon"></i></button>
+    </div>
+  </div>
+
+  <div class="exam-body">
+    <div class="exam-wrap">
+      <!-- Step: Name Entry -->
+      <div class="step active" id="stepName">
+        <div class="card p-8" style="text-align:center">
+          <i class="fa-solid fa-user-graduate"
+            style="font-size:48px;color:var(--accent);display:block;margin-bottom:16px"></i>
+          <h2 style="font-size:20px;font-weight:700;margin-bottom:6px">{{ exam.name }}</h2>
+          <p style="font-size:13px;color:var(--muted)">{{ exam.course_name }}{% if exam.course_code %} · {{
+            exam.course_code }}{% endif %}</p>
+          <div
+            style="display:flex;justify-content:center;gap:16px;font-size:13px;color:var(--muted);margin:10px 0 20px">
+            <span><i class="fa-solid fa-star mr-1" style="color:var(--gold)"></i>Out of {{ exam.total_marks }}
+              marks</span>
+            <span><i class="fa-solid fa-question-circle mr-1"></i>{{ exam.questions_per_student }} question{{ 's' if
+              exam.questions_per_student != 1 }}</span>
+          </div>
+          <input type="text" id="guestNameInput" class="inp"
+            style="text-align:center;font-size:16px;padding:12px;margin-bottom:12px" placeholder="Enter your full name"
+            onkeydown="if(event.key==='Enter')startExam()" />
+          <button class="btn btn-primary" style="width:100%;padding:12px;font-size:15px" onclick="startExam()">
+            <i class="fa-solid fa-play"></i> Start Exam
+          </button>
+          <p style="font-size:12px;color:var(--muted);margin-top:14px">Have an account? <a
+              href="/student/login?next_exam={{ exam.id }}" style="color:var(--accent)">Sign in</a></p>
+        </div>
+      </div>
+
+      <!-- Step: Question -->
+      <div class="step" id="stepQuestion">
+        <div style="margin-bottom:14px">
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:6px">
+            <span>Question <span id="qNum">1</span> of <span id="qTotal">?</span></span>
+            <span id="qPct">0%</span>
+          </div>
+          <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden">
+            <div id="progBar"
+              style="height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;transition:width .4s;width:0%">
+            </div>
+          </div>
+        </div>
+        <div class="card p-5" style="margin-bottom:12px">
+          <div id="multiLabel"
+            style="display:none;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;display:inline-flex;align-items:center;gap:5px;margin-bottom:10px;background:rgba(79,142,247,.12);color:var(--accent)">
+            <i class="fa-solid fa-check-double"></i><span id="multiText">Select 2 answers</span>
+          </div>
+          <p id="qText" style="font-size:16px;font-weight:500;line-height:1.6;margin-bottom:18px"></p>
+          <div id="optsList" style="display:flex;flex-direction:column;gap:8px"></div>
+        </div>
+        <div id="hintBox" style="display:none;margin-bottom:12px">
+          <div class="card p-4" style="border-left:4px solid var(--accent2)">
+            <p style="font-size:11px;font-weight:600;color:var(--accent2);margin-bottom:4px"><i
+                class="fa-solid fa-lightbulb"></i> Hint</p>
+            <p id="hintTxt" style="font-size:13px;color:var(--text2)"></p>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <button id="btnSubmit" class="btn btn-primary" style="flex:1;padding:12px;font-size:15px"
+            onclick="submitAnswer()" disabled>
+            <i class="fa-solid fa-paper-plane"></i> Submit Answer
+          </button>
+          <button class="btn btn-secondary" style="padding:12px 14px" onclick="openModal('finishModal')"
+            title="Finish early">
+            <i class="fa-solid fa-flag-checkered"></i>
+          </button>
+        </div>
+        <div class="card p-3" id="helpSect">
+          <p
+            style="font-size:10px;color:var(--muted);margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:.06em">
+            Helping Methods</p>
+          <div id="helpBtns" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:2px"></div>
+        </div>
+      </div>
+
+      <!-- Step: Between-question result -->
+      <div class="step" id="stepResult">
+        <div class="card p-6" style="text-align:center">
+          <div id="resBanner" style="margin-bottom:20px"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
+            <div class="card-inner p-4">
+              <p style="font-size:11px;color:var(--muted);margin-bottom:4px">Score</p>
+              <p id="resScore"
+                style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:var(--gold)">–</p>
+            </div>
+            <div class="card-inner p-4">
+              <p style="font-size:11px;color:var(--muted);margin-bottom:4px">Next in</p>
+              <p id="resCountdown"
+                style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:var(--accent2)">3</p>
+            </div>
+          </div>
+          <button class="btn btn-primary" style="width:100%;padding:12px" onclick="nextQ()">
+            <i class="fa-solid fa-arrow-right"></i> Next Question
+          </button>
+        </div>
+      </div>
+
+      <!-- Step: Finished -->
+      <div class="step" id="stepDone">
+        <div class="card p-6" style="display:flex;flex-direction:column;gap:20px">
+          <div style="text-align:center">
+            <i class="fa-solid fa-circle-check"
+              style="font-size:48px;color:var(--success);display:block;margin-bottom:12px"></i>
+            <h2 style="font-size:22px;font-weight:700">Exam Complete</h2>
+            <p id="doneName" style="color:var(--muted);margin-top:4px"></p>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="card-inner p-4" style="text-align:center">
+              <p style="font-size:11px;color:var(--muted);margin-bottom:4px">Final Score</p>
+              <p id="doneScore"
+                style="font-family:'JetBrains Mono',monospace;font-size:32px;font-weight:700;color:var(--gold)">–</p>
+              <p id="doneMax" style="font-size:11px;color:var(--muted)">out of {{ exam.total_marks }}</p>
+            </div>
+            <div class="card-inner p-4" style="text-align:center">
+              <p style="font-size:11px;color:var(--muted);margin-bottom:4px">Time</p>
+              <p id="doneTime"
+                style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:var(--accent2)">–</p>
+              <p style="font-size:11px;color:var(--muted)">seconds</p>
+            </div>
+          </div>
+          <div class="card-inner p-4" id="helpsSummary">
+            <p style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;margin-bottom:8px">Help
+              Used</p>
+          </div>
+          <button class="btn btn-primary" style="width:100%;padding:12px;font-size:15px" onclick="resetForNext()">
+            <i class="fa-solid fa-rotate-right"></i> Next Student
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Finish modal -->
+<div id="finishModal" class="modal-backdrop">
+  <div class="modal-box card p-6" style="max-width:360px">
+    <h3 style="font-size:16px;font-weight:600;margin-bottom:8px">Finish exam?</h3>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:20px">Your score will be recorded.</p>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeModal('finishModal')">Cancel</button>
+      <button class="btn btn-danger" style="flex:1" onclick="finishEarly()">Finish</button>
+    </div>
+  </div>
+</div>
+
+<!-- AI modal -->
+<div id="aiModal" class="modal-backdrop">
+  <div class="modal-box card p-5" style="max-width:460px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h3 style="font-size:15px;font-weight:600"><i class="fa-solid fa-robot mr-2" style="color:var(--accent)"></i>AI
+        Assistant</h3>
+      <button onclick="closeModal('aiModal')"
+        style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px"><i
+          class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div id="aiLoad" style="display:none;text-align:center;padding:20px">
+      <i class="fa-solid fa-spinner fa-spin"
+        style="font-size:28px;color:var(--accent);display:block;margin-bottom:10px"></i>
+      <p style="font-size:13px;color:var(--muted)">Analysing question…</p>
+    </div>
+    <div id="aiRes" style="display:none">
+      <div
+        style="background:var(--inp-bg);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px">
+        <p style="font-size:11px;font-weight:600;color:var(--accent2);margin-bottom:5px"><i
+            class="fa-solid fa-lightbulb mr-1"></i>Hint</p>
+        <p id="aiHint" style="font-size:14px;line-height:1.6"></p>
+      </div>
+      <div
+        style="background:var(--success-bg);border:1px solid var(--success-bdr);border-radius:10px;padding:10px;margin-bottom:10px">
+        <p style="font-size:11px;font-weight:600;color:var(--success);margin-bottom:4px"><i
+            class="fa-solid fa-check-circle mr-1"></i>AI suggests</p>
+        <p id="aiAns" style="font-size:14px;font-weight:600;color:var(--success)"></p>
+      </div>
+      <p style="font-size:12px;color:var(--muted)"><i class="fa-solid fa-triangle-exclamation mr-1"
+          style="color:var(--warn)"></i>AI may be wrong. The choice is yours.</p>
+    </div>
+    <div id="aiInit">
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Ask the built-in AI for a hint. This deducts
+        marks.</p>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeModal('aiModal')">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" id="aiBtn" onclick="doAskAi()">
+        <i class="fa-solid fa-wand-magic-sparkles"></i> Ask AI
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // @ts-nocheck
+  'use strict';
+  const EXAM_ID = parseInt(document.getElementById('examMeta').dataset.examId, 10);
+  const TOTAL_MARKS = parseFloat(document.getElementById('examMeta').dataset.totalMarks);
+  const RESULT_CFG = {
+    correct: { icon: 'fa-circle-check', c: 'success', label: 'Correct!' },
+    wrong: { icon: 'fa-circle-xmark', c: 'danger', label: 'Wrong' },
+    all_correct: { icon: 'fa-check-double', c: 'success', label: 'Both correct!' },
+    partial: { icon: 'fa-circle-half-stroke', c: 'warn', label: 'Partially correct' },
+    all_wrong: { icon: 'fa-circle-xmark', c: 'danger', label: 'Both wrong (−2)' },
+    timed_out: { icon: 'fa-clock', c: 'warn', label: "Time's Up" },
+  };
+  const HELP_META = { hint: { icon: 'fa-lightbulb', l: 'Hint' }, remove_wrong: { icon: 'fa-scissors', l: '×2' }, ask_ai: { icon: 'fa-robot', l: 'AI' }, ask_friend: { icon: 'fa-user-group', l: 'Friend' }, change_question: { icon: 'fa-shuffle', l: 'Skip' }, add_time: { icon: 'fa-clock-rotate-left', l: '+1m' } };
+  const CIRC = 131.9;
+  const st = { aid: null, score: TOTAL_MARKS, sel: new Set(), opts: [], removed: [], isMulti: false, nCorr: 1, used: new Set(), tiv: null, tsec: 60, tmax: 60, pend: null, t0: null, allows: [], costs: {}, total: 1, name: '' };
+
+  function showStep(id) { document.querySelectorAll('.step').forEach(s => s.classList.remove('active')); document.getElementById(id)?.classList.add('active'); }
+
+  function startTimer(s) {
+    stopTimer(); st.tsec = s; st.tmax = s; updTimer(s);
+    st.tiv = setInterval(async () => {
+      st.tsec--; updTimer(st.tsec);
+      const off = CIRC * (1 - st.tsec / st.tmax);
+      document.getElementById('timerRing').style.strokeDashoffset = off;
+      document.getElementById('timerRing').style.stroke = st.tsec <= 10 ? 'var(--danger)' : 'var(--accent)';
+      if (st.tsec <= 0) { stopTimer(); if (st.sel.size === 0) { const a = st.opts.filter((_, i) => !st.removed.includes(i)); if (a.length) st.sel = new Set([a[0]]); } await submitAnswer(true); }
+    }, 1000);
+  }
+  function stopTimer() { clearInterval(st.tiv); }
+  function updTimer(s) { const e = document.getElementById('timerText'); if (e) e.textContent = Math.max(0, s); }
+  function updScore(s) { st.score = s; const e = document.getElementById('scoreDisplay'); if (!e) return; e.textContent = s.toFixed(1); e.style.color = s >= TOTAL_MARKS * .8 ? 'var(--success)' : s >= TOTAL_MARKS * .5 ? 'var(--gold)' : 'var(--danger)'; }
+
+  async function startExam() {
+    const name = document.getElementById('guestNameInput').value.trim();
+    if (!name) { toast('Enter your full name.', 'error'); return; }
+    st.name = name; st.t0 = Date.now();
+    const d = await api('/api/public/start_exam', { exam_id: EXAM_ID, guest_name: name });
+    if (!d.ok) { toast(d.error, 'error'); return; }
+    st.aid = d.attempt_id; st.allows = d.allowed_helps || []; st.costs = d.help_costs || {}; st.total = d.total_questions || 1;
+    updScore(d.score); buildHelps(); loadQ(d.question, d.question_index, d.total_questions, d.timer_seconds);
+  }
+
+  function buildHelps() {
+    const w = document.getElementById('helpBtns'), s = document.getElementById('helpSect');
+    if (!st.allows.length) { s.style.display = 'none'; return; }
+    w.innerHTML = st.allows.map(h => {
+      const m = HELP_META[h] || { icon: 'fa-question', l: h }; const cost = st.costs[h] ?? 1;
+      return `<button class="help-btn" data-h="${h}" onclick="useHelp('${h}')"><i class="fa-solid ${m.icon}"></i><span>${m.l}</span><span class="cost">−${cost}</span></button>`;
+    }).join('');
+  }
+  function refreshHelps() { document.querySelectorAll('[data-h]').forEach(b => { b.disabled = st.used.has(b.dataset.h); }); }
+
+  function loadQ(q, idx, total, ts) {
+    st.opts = [...q.options]; st.sel = new Set(); st.removed = []; st.isMulti = q.multi_answer || false; st.nCorr = q.num_correct || 1;
+    const pct = Math.round((idx / total) * 100);
+    document.getElementById('qNum').textContent = idx + 1;
+    document.getElementById('qTotal').textContent = total;
+    document.getElementById('qPct').textContent = pct + '%';
+    document.getElementById('progBar').style.width = pct + '%';
+    const ml = document.getElementById('multiLabel');
+    if (st.isMulti) { ml.style.display = 'inline-flex'; document.getElementById('multiText').textContent = `Select ${st.nCorr} answer${st.nCorr > 1 ? 's' : ''}`; }
+    else ml.style.display = 'none';
+    document.getElementById('qText').textContent = q.text;
+    document.getElementById('hintBox').style.display = 'none';
+    document.getElementById('btnSubmit').disabled = true;
+    renderOpts(); refreshHelps(); showStep('stepQuestion'); startTimer(ts || 60);
+  }
+
+  function renderOpts() {
+    const list = document.getElementById('optsList'); list.innerHTML = '';
+    st.opts.forEach((opt, i) => {
+      const btn = document.createElement('button'); btn.className = 'option-btn';
+      btn.dataset.opt = opt; btn.dataset.idx = i;
+      if (st.removed.includes(i)) btn.classList.add('removed');
+      if (st.isMulti) {
+        const cb = document.createElement('span'); cb.id = 'cb_' + i;
+        cb.style.cssText = 'display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-radius:3px;vertical-align:middle;margin-right:10px;flex-shrink:0;transition:all .15s';
+        btn.appendChild(cb); btn.appendChild(document.createTextNode(opt));
+      } else btn.textContent = opt;
+      btn.onclick = () => pick(opt, i, btn);
+      list.appendChild(btn);
+    });
+  }
+
+  function pick(opt, i, btn) {
+    if (btn.disabled || btn.classList.contains('removed')) return;
+    if (st.isMulti) {
+      if (st.sel.has(opt)) { st.sel.delete(opt); btn.classList.remove('selected'); const cb = document.getElementById('cb_' + i); if (cb) { cb.style.background = ''; cb.style.borderColor = 'var(--border)'; cb.innerHTML = ''; } }
+      else {
+        if (st.sel.size >= st.nCorr) { toast('Select ' + st.nCorr + ' answer' + (st.nCorr > 1 ? 's' : '') + '.', 'info'); return; }
+        st.sel.add(opt); btn.classList.add('selected');
+        const cb = document.getElementById('cb_' + i);
+        if (cb) { cb.style.background = 'var(--accent)'; cb.style.borderColor = 'var(--accent)'; cb.innerHTML = '<svg viewBox="0 0 10 10" width="12" height="12"><polyline points="1.5,5 4,7.5 8.5,2.5" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>'; }
+      }
+      document.getElementById('btnSubmit').disabled = st.sel.size === 0;
+    } else {
+      st.sel = new Set([opt]); document.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected'); document.getElementById('btnSubmit').disabled = false;
+    }
+  }
+
+  async function submitAnswer(to = false) {
+    if (!to && st.sel.size === 0) return;
+    stopTimer(); document.getElementById('btnSubmit').disabled = true;
+    document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
+    const sel = Array.from(st.sel);
+    const d = await api('/api/public/submit_answer', { attempt_id: st.aid, selected_options: sel, timed_out: to });
+    if (!d.ok) { toast(d.error, 'error'); return; }
+    updScore(d.score);
+    const cs = new Set((d.correct_answers || []).map(s => s.trim()));
+    const ss = new Set(sel.map(s => s.trim()));
+    document.querySelectorAll('.option-btn').forEach(b => {
+      const o = (b.dataset.opt || '').trim();
+      if (cs.has(o)) b.classList.add('correct'); else if (ss.has(o)) b.classList.add('incorrect');
+    });
+    if (d.finished) setTimeout(() => showDone(d), 1200);
+    else { st.pend = d; setTimeout(() => showRes(d), 1200); }
+  }
+
+  function showRes(d) {
+    document.getElementById('resScore').textContent = d.score.toFixed(1);
+    document.getElementById('resScore').style.color = d.score >= TOTAL_MARKS * .8 ? 'var(--success)' : d.score >= TOTAL_MARKS * .5 ? 'var(--gold)' : 'var(--danger)';
+    const cfg = RESULT_CFG[d.result] || RESULT_CFG.wrong;
+    document.getElementById('resBanner').innerHTML = `<div style="padding:14px;border-radius:10px;border:1px solid var(--${cfg.c}-bdr);background:var(--${cfg.c}-bg);text-align:center"><i class="fa-solid ${cfg.icon}" style="font-size:24px;color:var(--${cfg.c});display:block;margin-bottom:6px"></i><p style="font-weight:600;color:var(--${cfg.c})">${cfg.label}</p><p style="font-size:12px;color:var(--muted);margin-top:4px">Correct: ${escHtml((d.correct_answers || []).join(' & '))}</p></div>`;
+    showStep('stepResult');
+    let cd = 3; document.getElementById('resCountdown').textContent = cd;
+    const iv = setInterval(() => { cd--; const e = document.getElementById('resCountdown'); if (e) e.textContent = cd; if (cd <= 0) { clearInterval(iv); nextQ(); } }, 1000);
+  }
+  function nextQ() { if (!st.pend) return; const d = st.pend; st.pend = null; loadQ(d.next_question, d.question_index, st.total, d.timer_seconds); }
+
+  async function finishEarly() {
+    closeModal('finishModal'); stopTimer();
+    const d = await api('/api/public/finish_early', { attempt_id: st.aid });
+    if (!d.ok) { toast(d.error, 'error'); return; }
+    showDone({ score: d.score, helps_used: d.helps_used, result: null, correct_answers: [] });
+  }
+
+  function showDone(d) {
+    stopTimer();
+    const elapsed = st.t0 ? Math.round((Date.now() - st.t0) / 1000) : '–';
+    const sc = d.score; const helps = d.helps_used || [];
+    document.getElementById('doneName').textContent = st.name;
+    document.getElementById('doneScore').textContent = sc != null ? sc.toFixed(1) : '–';
+    document.getElementById('doneScore').style.color = sc != null ? (sc >= TOTAL_MARKS * .8 ? 'var(--success)' : sc >= TOTAL_MARKS * .5 ? 'var(--gold)' : 'var(--danger)') : 'var(--muted)';
+    document.getElementById('doneTime').textContent = elapsed;
+    const HL = { hint: 'Hint (−0.5)', remove_wrong: 'Remove ×2 (−1)', ask_ai: 'Ask AI (−1)', ask_friend: 'Ask Friend (−1)', change_question: 'Skip (−1)', add_time: '+1 min (−1)' };
+    const hs = document.getElementById('helpsSummary');
+    hs.innerHTML = '<p style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;margin-bottom:8px">Help Used</p>'
+      + (helps.length ? helps.map(h => `<div style="font-size:13px;padding:5px 0;border-bottom:1px solid var(--border);color:var(--text2)">${HL[h] || h}</div>`).join('')
+        : '<p style="font-size:13px;color:var(--success)"><i class="fa-solid fa-star mr-1"></i>No help used!</p>');
+    showStep('stepDone');
+  }
+
+  function resetForNext() {
+    st.aid = null; st.score = TOTAL_MARKS; st.sel = new Set(); st.used = new Set(); st.name = ''; st.pend = null;
+    document.getElementById('guestNameInput').value = '';
+    updScore(TOTAL_MARKS); showStep('stepName');
+  }
+
+  async function useHelp(type) { if (type === 'ask_ai') { openAiModal(); return; } await doHelp(type); }
+  function openAiModal() {
+    document.getElementById('aiLoad').style.display = 'none';
+    document.getElementById('aiRes').style.display = 'none';
+    document.getElementById('aiInit').style.display = '';
+    const btn = document.getElementById('aiBtn');
+    btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Ask AI';
+    btn.onclick = doAskAi;
+    openModal('aiModal');
+  }
+  async function doAskAi() {
+    const btn = document.getElementById('aiBtn');
+    btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Asking…';
+    document.getElementById('aiInit').style.display = 'none';
+    document.getElementById('aiLoad').style.display = '';
+    const d = await api('/api/public/use_help', { attempt_id: st.aid, help_type: 'ask_ai' });
+    document.getElementById('aiLoad').style.display = 'none';
+    if (!d.ok) { toast(d.error, 'error'); closeModal('aiModal'); return; }
+    st.used.add('ask_ai'); refreshHelps(); updScore(d.score);
+    document.getElementById('aiHint').textContent = d.ai_hint || 'Think carefully.';
+    document.getElementById('aiAns').textContent = d.ai_answer || 'No suggestion.';
+    document.getElementById('aiRes').style.display = '';
+    btn.innerHTML = '<i class="fa-solid fa-check"></i> Done'; btn.disabled = false; btn.onclick = () => closeModal('aiModal');
+  }
+  async function doHelp(type) {
+    const d = await api('/api/public/use_help', { attempt_id: st.aid, help_type: type });
+    if (!d.ok) { toast(d.error, 'error'); return; }
+    st.used.add(type); refreshHelps(); updScore(d.score);
+    if (type === 'hint') { document.getElementById('hintTxt').textContent = d.hint; document.getElementById('hintBox').style.display = ''; }
+    else if (type === 'remove_wrong') { st.removed = d.remove_indices || []; renderOpts(); const r = new Set(st.removed.map(i => st.opts[i])); for (const o of r) st.sel.delete(o); document.getElementById('btnSubmit').disabled = st.sel.size === 0; }
+    else if (type === 'change_question') { stopTimer(); st.sel = new Set(); st.removed = []; loadQ(d.question, d.question_index, st.total, d.timer_seconds); }
+    else if (type === 'add_time') { st.tsec += (d.extra_seconds || 60); st.tmax += (d.extra_seconds || 60); toast('+60 seconds!', 'success'); }
+    else if (type === 'ask_friend') toast('Mark deducted.', 'info');
+  }
+</script>
+{% endblock %}

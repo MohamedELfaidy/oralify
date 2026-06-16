@@ -7,3 +7,5 @@ easyocr
 Pillow
 python-dotenv
 openpyxl
+gunicorn
+qrcode[pil]

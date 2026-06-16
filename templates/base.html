@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" id="htmlRoot">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}Oralify{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <link rel="stylesheet" href="/static/css/main.css"/>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg"/>
+  {% block head %}{% endblock %}
+</head>
+<body>
+{% block body %}{% endblock %}
+
+<div id="toast"></div>
+
+<script>
+// ── Theme ──────────────────────────────────────────────────────────────────
+(function(){
+  const t = localStorage.getItem('oralify-theme') || 'light';
+  document.getElementById('htmlRoot').setAttribute('data-theme', t);
+})();
+function toggleTheme(){
+  const h = document.getElementById('htmlRoot');
+  const isDark = h.getAttribute('data-theme') === 'dark';
+  h.setAttribute('data-theme', isDark ? 'light' : 'dark');
+  localStorage.setItem('oralify-theme', isDark ? 'light' : 'dark');
+  document.querySelectorAll('.theme-icon').forEach(el => {
+    el.className = 'fa-solid ' + (isDark ? 'fa-moon' : 'fa-sun') + ' theme-icon';
+  });
+}
+document.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('oralify-theme') || 'light';
+  document.querySelectorAll('.theme-icon').forEach(el => {
+    el.className = 'fa-solid ' + (saved === 'dark' ? 'fa-sun' : 'fa-moon') + ' theme-icon';
+  });
+});
+
+// ── Toast ──────────────────────────────────────────────────────────────────
+let _tt = null;
+function toast(msg, type = 'info') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show ' + type;
+  clearTimeout(_tt);
+  _tt = setTimeout(() => { el.className = ''; }, 3500);
+}
+
+// ── API ────────────────────────────────────────────────────────────────────
+async function api(url, body = null, method = null) {
+  const opts = {
+    method: method || (body !== null ? 'POST' : 'GET'),
+    headers: body !== null ? { 'Content-Type': 'application/json' } : {},
+    body: body !== null ? JSON.stringify(body) : undefined,
+  };
+  const res = await fetch(url, opts);
+  return res.json();
+}
+async function apiForm(url, fd) {
+  const res = await fetch(url, { method: 'POST', body: fd });
+  return res.json();
+}
+
+// ── Modal ──────────────────────────────────────────────────────────────────
+let _openModalStack = [];
+
+function openModal(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.add('open');
+  if (!_openModalStack.includes(id)) _openModalStack.push(id);
+  // Focus the first focusable element inside, for keyboard users
+  setTimeout(() => {
+    const focusable = el.querySelector('input, textarea, select, button, [tabindex]');
+    focusable?.focus();
+  }, 50);
+}
+
+function closeModal(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove('open');
+  _openModalStack = _openModalStack.filter(m => m !== id);
+}
+
+function closeTopModal() {
+  if (_openModalStack.length === 0) return false;
+  const topId = _openModalStack[_openModalStack.length - 1];
+  closeModal(topId);
+  return true;
+}
+
+// Escape key closes the topmost open modal
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeTopModal();
+  }
+});
+
+// Clicking the backdrop (outside the modal box) closes it
+document.addEventListener('click', (e) => {
+  if (e.target.classList && e.target.classList.contains('modal-backdrop') && e.target.classList.contains('open')) {
+    closeModal(e.target.id);
+  }
+});
+
+// Trap Tab focus inside the topmost open modal so keyboard users don't tab out
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Tab' || _openModalStack.length === 0) return;
+  const topId = _openModalStack[_openModalStack.length - 1];
+  const modal = document.getElementById(topId);
+  if (!modal) return;
+  const focusables = modal.querySelectorAll('input, textarea, select, button, a[href], [tabindex]:not([tabindex="-1"])');
+  if (!focusables.length) return;
+  const first = focusables[0];
+  const last  = focusables[focusables.length - 1];
+  if (e.shiftKey && document.activeElement === first) {
+    e.preventDefault(); last.focus();
+  } else if (!e.shiftKey && document.activeElement === last) {
+    e.preventDefault(); first.focus();
+  }
+});
+
+// ── Escape HTML ────────────────────────────────────────────────────────────
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}
+
+// ── Confirm helper ─────────────────────────────────────────────────────────
+function confirmAction(msg, cb) {
+  if (confirm(msg)) cb();
+}
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

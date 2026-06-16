@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block title %}Oralify – Oral Exam Platform{% endblock %}
+{% block body %}
+<style>
+  .home-hero {
+    min-height: 100vh;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .hero-nav {
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  .hero-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 24px;
+    text-align: center;
+  }
+
+  .portal-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 40px 32px;
+    width: 100%;
+    max-width: 320px;
+    transition: all .25s;
+    text-decoration: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+  }
+
+  .portal-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--accent);
+  }
+
+  .portal-icon {
+    width: 72px;
+    height: 72px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+  }
+
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    max-width: 800px;
+    width: 100%;
+    margin-top: 48px;
+  }
+
+  .feature-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: left;
+  }
+</style>
+
+<div class="home-hero">
+  <nav class="hero-nav">
+    <div style="display:flex;align-items:center;gap:10px">
+      <svg class="logo-icon" width="32" height="32" viewBox="0 0 36 36" fill="none">
+        <circle cx="18" cy="18" r="17" stroke="var(--accent)" stroke-width="1.5" />
+        <path d="M10 22 Q18 8 26 22" stroke="var(--accent2)" stroke-width="2" stroke-linecap="round" fill="none" />
+        <circle cx="18" cy="24" r="3" fill="var(--accent)" />
+        <line x1="18" y1="27" x2="18" y2="30" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" />
+      </svg>
+      <span style="font-size:20px;font-weight:700" class="gradient-text">Oralify</span>
+    </div>
+    <button class="theme-toggle" onclick="toggleTheme()">
+      <i class="fa-solid fa-moon theme-icon"></i>
+    </button>
+  </nav>
+
+  <div class="hero-body">
+    <div style="margin-bottom:12px">
+      <span class="badge badge-accent"><i class="fa-solid fa-graduation-cap mr-1"></i>Oral Exam Platform</span>
+    </div>
+    <h1 style="font-size:clamp(2rem,5vw,3.5rem);font-weight:700;line-height:1.15;margin-bottom:16px">
+      <span class="gradient-text">Smart Oral Exams</span><br>
+      <span style="color:var(--text)">for Modern Education</span>
+    </h1>
+    <p style="font-size:16px;color:var(--muted);max-width:520px;margin-bottom:48px">
+      Create, schedule and conduct oral examinations with AI-powered question generation, real-time scoring, and
+      detailed analytics.
+    </p>
+
+    <div style="display:flex;flex-wrap:wrap;gap:20px;justify-content:center">
+      <a href="/public" class="portal-card">
+        <div class="portal-icon" style="background:rgba(22,163,74,.1);color:var(--success)">
+          <i class="fa-solid fa-globe"></i>
+        </div>
+        <div>
+          <p style="font-size:18px;font-weight:700;color:var(--text)">Public Exams</p>
+          <p style="font-size:13px;color:var(--muted);margin-top:4px">No login needed — just enter your name</p>
+        </div>
+        <div class="btn btn-success" style="width:100%">
+          <i class="fa-solid fa-play"></i> Browse Public Exams
+        </div>
+      </a>
+      <a href="/teacher/login" class="portal-card">
+        <div class="portal-icon" style="background:rgba(37,99,235,.1);color:var(--accent)">
+          <i class="fa-solid fa-chalkboard-teacher"></i>
+        </div>
+        <div>
+          <p style="font-size:18px;font-weight:700;color:var(--text)">Teacher Portal</p>
+          <p style="font-size:13px;color:var(--muted);margin-top:4px">Create exams, manage questions, view results</p>
+        </div>
+        <div class="btn btn-primary" style="width:100%">
+          <i class="fa-solid fa-arrow-right-to-bracket"></i> Sign In as Teacher
+        </div>
+      </a>
+
+      <a href="/student/login" class="portal-card">
+        <div class="portal-icon" style="background:rgba(8,145,178,.1);color:var(--accent2)">
+          <i class="fa-solid fa-user-graduate"></i>
+        </div>
+        <div>
+          <p style="font-size:18px;font-weight:700;color:var(--text)">Student Portal</p>
+          <p style="font-size:13px;color:var(--muted);margin-top:4px">View available exams, take tests, see your scores
+          </p>
+        </div>
+        <div class="btn btn-secondary" style="width:100%;border-color:var(--border2)">
+          <i class="fa-solid fa-arrow-right-to-bracket"></i> Sign In as Student
+        </div>
+      </a>
+    </div>
+
+    <div class="feature-grid">
+      <div class="feature-item">
+        <i class="fa-solid fa-wand-magic-sparkles" style="color:var(--accent);font-size:20px;margin-bottom:8px"></i>
+        <p style="font-weight:600;font-size:14px">AI Question Generation</p>
+        <p style="font-size:12px;color:var(--muted);margin-top:4px">Upload PDFs or paste text — AI creates MCQ questions
+          instantly</p>
+      </div>
+      <div class="feature-item">
+        <i class="fa-solid fa-clock" style="color:var(--gold);font-size:20px;margin-bottom:8px"></i>
+        <p style="font-weight:600;font-size:14px">Scheduled Exams</p>
+        <p style="font-size:12px;color:var(--muted);margin-top:4px">Set start/end times. Students can only attend during
+          the window</p>
+      </div>
+      <div class="feature-item">
+        <i class="fa-solid fa-chart-bar" style="color:var(--success);font-size:20px;margin-bottom:8px"></i>
+        <p style="font-weight:600;font-size:14px">Instant Analytics</p>
+        <p style="font-size:12px;color:var(--muted);margin-top:4px">Per-exam results, scores, export to Excel</p>
+      </div>
+      <div class="feature-item">
+        <i class="fa-solid fa-shield-halved" style="color:var(--accent2);font-size:20px;margin-bottom:8px"></i>
+        <p style="font-weight:600;font-size:14px">Secure Authentication</p>
+        <p style="font-size:12px;color:var(--muted);margin-top:4px">Separate teacher and student accounts with secure
+          login</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

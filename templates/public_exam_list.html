@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Public Exams – Oralify{% endblock %}
+{% block body %}
+<style>
+  .page {
+    min-height: 100vh;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column
+  }
+
+  .topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between
+  }
+
+  .body {
+    flex: 1;
+    padding: 32px 16px;
+    max-width: 860px;
+    margin: 0 auto;
+    width: 100%
+  }
+
+  .exam-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    margin-bottom: 14px;
+    transition: all .2s;
+    display: block;
+    text-decoration: none
+  }
+
+  .exam-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-lg)
+  }
+</style>
+<div class="page">
+  <div class="topbar">
+    <a href="/" style="display:flex;align-items:center;gap:8px;text-decoration:none">
+      <svg class="logo-icon" width="26" height="26" viewBox="0 0 36 36" fill="none">
+        <circle cx="18" cy="18" r="17" stroke="var(--accent)" stroke-width="1.5" />
+        <path d="M10 22 Q18 8 26 22" stroke="var(--accent2)" stroke-width="2" stroke-linecap="round" fill="none" />
+        <circle cx="18" cy="24" r="3" fill="var(--accent)" />
+      </svg>
+      <span class="gradient-text" style="font-weight:700;font-size:16px">Oralify</span>
+    </a>
+    <div style="display:flex;gap:8px">
+      <a href="/student/login" class="btn btn-secondary btn-sm">Student Login</a>
+      <a href="/teacher/login" class="btn btn-primary btn-sm">Teacher Login</a>
+      <button class="theme-toggle" onclick="toggleTheme()"><i class="fa-solid fa-moon theme-icon"></i></button>
+    </div>
+  </div>
+  <div class="body">
+    <div style="margin-bottom:24px">
+      <h1 style="font-size:24px;font-weight:700" class="gradient-text">Public Exams</h1>
+      <p style="color:var(--muted);margin-top:4px">No login required — just enter your name and start.</p>
+    </div>
+    {% if not exams %}
+    <div class="card p-8" style="text-align:center">
+      <i class="fa-solid fa-calendar-xmark"
+        style="font-size:36px;color:var(--muted);display:block;margin-bottom:12px"></i>
+      <p style="color:var(--muted)">No public exams available right now.</p>
+      <a href="/" class="btn btn-secondary" style="margin-top:16px">Back to Home</a>
+    </div>
+    {% else %}
+    {% for exam in exams %}
+    <a href="/exam/{{ exam.id }}" class="exam-card">
+      <div
+        style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+        <div>
+          <p style="font-size:16px;font-weight:700;color:var(--text)">{{ exam.name }}</p>
+          <p style="font-size:13px;color:var(--muted);margin-top:3px">
+            {{ exam.course_name }}{% if exam.course_code %} · {{ exam.course_code }}{% endif %}
+            · <i class="fa-solid fa-chalkboard-teacher" style="color:var(--accent)"></i> {{ exam.teacher_name }}
+          </p>
+        </div>
+        <span class="badge badge-success"><i class="fa-solid fa-globe mr-1"></i>Public · Open</span>
+      </div>
+      {% if exam.description %}<p style="font-size:13px;color:var(--text2);margin-bottom:10px">{{ exam.description }}
+      </p>{% endif %}
+      <div style="display:flex;gap:14px;font-size:12px;color:var(--muted);margin-bottom:12px;flex-wrap:wrap">
+        <span><i class="fa-solid fa-question-circle mr-1"></i>{{ exam.questions_per_student }} question{{ 's' if
+          exam.questions_per_student != 1 }}</span>
+        <span><i class="fa-solid fa-star mr-1" style="color:var(--gold)"></i>Out of {{ exam.total_marks }} marks</span>
+        {% if exam.end_time %}<span><i class="fa-solid fa-clock mr-1"></i>Closes {{ exam.end_time.strftime('%d %b
+          %H:%M') }}</span>{% endif %}
+      </div>
+      <div class="btn btn-primary" style="width:100%;text-align:center;padding:10px">
+        <i class="fa-solid fa-play"></i> Start Exam
+      </div>
+    </a>
+    {% endfor %}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

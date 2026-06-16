@@ -1,0 +1,478 @@
+{% extends "base.html" %}
+{% block title %}Student Dashboard – Oralify{% endblock %}
+{% block body %}
+<style>
+  .sidebar {
+    width: 260px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 40;
+    transition: transform .3s, background .25s
+  }
+
+  .sidebar.collapsed {
+    transform: translateX(-260px)
+  }
+
+  .main-content {
+    margin-left: 260px;
+    min-height: 100vh;
+    transition: margin .3s
+  }
+
+  .main-content.full {
+    margin-left: 0
+  }
+
+  @media(max-width:1023px) {
+    .sidebar {
+      transform: translateX(-260px)
+    }
+
+    .sidebar.open {
+      transform: translateX(0)
+    }
+
+    .main-content {
+      margin-left: 0
+    }
+  }
+
+  .sidebar-logo {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between
+  }
+
+  .sidebar-nav {
+    flex: 1;
+    padding: 10px 8px;
+    overflow-y: auto
+  }
+
+  .sidebar-footer {
+    padding: 10px 8px;
+    border-top: 1px solid var(--border)
+  }
+
+  .topbar {
+    height: 54px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    position: sticky;
+    top: 0;
+    z-index: 30
+  }
+
+  .content-area {
+    padding: 20px;
+    max-width: 900px;
+    margin: 0 auto
+  }
+
+  .exam-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px;
+    transition: all .2s
+  }
+
+  .exam-card.available:hover {
+    border-color: var(--accent);
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-1px)
+  }
+
+  .menu-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .5);
+    z-index: 39
+  }
+
+  .menu-overlay.show {
+    display: block
+  }
+
+  .section-panel {
+    display: none
+  }
+
+  .section-panel.active {
+    display: block
+  }
+
+  .toggle-sidebar-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 10px;
+    cursor: pointer;
+    color: var(--muted);
+    transition: all .2s;
+    font-size: 14px
+  }
+
+  .toggle-sidebar-btn:hover {
+    color: var(--accent);
+    border-color: var(--accent)
+  }
+</style>
+
+<div style="display:flex;min-height:100vh">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <a href="/" style="display:flex;align-items:center;gap:8px;text-decoration:none">
+        <svg class="logo-icon" width="26" height="26" viewBox="0 0 36 36" fill="none">
+          <circle cx="18" cy="18" r="17" stroke="var(--accent)" stroke-width="1.5" />
+          <path d="M10 22 Q18 8 26 22" stroke="var(--accent2)" stroke-width="2" stroke-linecap="round" fill="none" />
+          <circle cx="18" cy="24" r="3" fill="var(--accent)" />
+          <line x1="18" y1="27" x2="18" y2="30" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" />
+        </svg>
+        <span style="font-weight:700;font-size:15px" class="gradient-text">Oralify</span>
+      </a>
+      <button onclick="toggleSidebar()" class="toggle-sidebar-btn" title="Hide sidebar">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="nav-link active" id="navAvail" onclick="showSection('available')"> <i
+          class="fa-solid fa-list-check w-4"></i> Available Exams</button>
+      <button class="nav-link" id="navHistory" onclick="showSection('history')"> <i
+          class="fa-solid fa-clock-rotate-left w-4"></i> My Results</button>
+      <button class="nav-link" id="navAccount" onclick="showSection('account')"> <i
+          class="fa-solid fa-user-circle w-4"></i> My Account</button>
+    </nav>
+    <div class="sidebar-footer">
+      <div style="padding:8px 12px;margin-bottom:4px;border-radius:9px;background:var(--hover-bg)">
+        <p style="font-size:11px;color:var(--muted)">Signed in as</p>
+        <p style="font-size:13px;font-weight:600;color:var(--text)" id="sidebarName">{{ student.full_name }}</p>
+        <p style="font-size:11px;color:var(--muted)">ID: {{ student.student_id }}</p>
+      </div>
+      <button class="nav-link" onclick="toggleTheme()"><i class="fa-solid fa-moon theme-icon w-4"></i> Toggle
+        Theme</button>
+      <a href="/logout" class="nav-link" style="color:var(--danger)"><i class="fa-solid fa-right-from-bracket w-4"></i>
+        Sign Out</a>
+    </div>
+  </aside>
+  <div class="menu-overlay" id="menuOverlay" onclick="closeMobileMenu()"></div>
+
+  <div class="main-content" id="mainContent">
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="toggle-sidebar-btn" id="openSidebarBtn" onclick="toggleSidebar()" style="display:none"
+          title="Show sidebar">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <button class="toggle-sidebar-btn" id="mobileMenuBtn" onclick="openMobileMenu()" style="display:none">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <h2 id="pageTitle" style="font-size:15px;font-weight:600">Available Exams</h2>
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="refreshCurrent()"><i
+          class="fa-solid fa-rotate-right"></i></button>
+    </div>
+
+    <div class="content-area page-enter">
+
+      <!-- Available Exams -->
+      <div class="section-panel active" id="sectionAvailable">
+        <div id="availableList" style="display:flex;flex-direction:column;gap:14px"></div>
+        <p id="availableEmpty" style="display:none;text-align:center;color:var(--muted);padding:64px;font-size:15px">
+          <i class="fa-solid fa-calendar-xmark" style="font-size:36px;display:block;margin-bottom:12px"></i>
+          No exams available at the moment.
+        </p>
+      </div>
+
+      <!-- My Results -->
+      <div class="section-panel" id="sectionHistory">
+        <div id="historyList" style="display:flex;flex-direction:column;gap:12px"></div>
+        <p id="historyEmpty" style="display:none;text-align:center;color:var(--muted);padding:64px;font-size:15px">
+          <i class="fa-solid fa-inbox" style="font-size:36px;display:block;margin-bottom:12px"></i>
+          You haven't taken any exams yet.
+        </p>
+      </div>
+
+      <!-- Account -->
+      <div class="section-panel" id="sectionAccount">
+        <div style="max-width:620px;display:flex;flex-direction:column;gap:16px">
+
+          <div class="card p-6">
+            <h3 style="font-size:15px;font-weight:600;margin-bottom:16px"><i class="fa-solid fa-chart-bar mr-2"
+                style="color:var(--accent)"></i>My Statistics</h3>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px">
+              <div style="text-align:center;padding:12px;border-radius:10px;background:var(--hover-bg)">
+                <p style="font-size:22px;font-weight:700;color:var(--accent)" id="ss_total">–</p>
+                <p style="font-size:12px;color:var(--muted)">Exams Taken</p>
+              </div>
+              <div style="text-align:center;padding:12px;border-radius:10px;background:var(--hover-bg)">
+                <p style="font-size:22px;font-weight:700;color:var(--success)" id="ss_done">–</p>
+                <p style="font-size:12px;color:var(--muted)">Completed</p>
+              </div>
+              <div style="text-align:center;padding:12px;border-radius:10px;background:var(--hover-bg)">
+                <p style="font-size:22px;font-weight:700;color:var(--gold)" id="ss_avg">–</p>
+                <p style="font-size:12px;color:var(--muted)">Avg Score</p>
+              </div>
+              <div style="text-align:center;padding:12px;border-radius:10px;background:var(--hover-bg)">
+                <p style="font-size:22px;font-weight:700;color:var(--accent2)" id="ss_best">–</p>
+                <p style="font-size:12px;color:var(--muted)">Best Score</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="card p-6">
+            <h3 style="font-size:15px;font-weight:600;margin-bottom:16px"><i class="fa-solid fa-user-pen mr-2"
+                style="color:var(--accent2)"></i>Edit Profile</h3>
+            <div class="form-group"><label class="form-label">Full Name</label><input type="text" id="sFullName"
+                class="inp" value="{{ student.full_name }}" /></div>
+            <div class="form-group"><label class="form-label">Email</label><input type="email" id="sEmail" class="inp"
+                value="{{ student.email }}" /></div>
+            <button class="btn btn-primary" onclick="updateStudentProfile()"><i class="fa-solid fa-save"></i> Save
+              Changes</button>
+          </div>
+
+          <div class="card p-6">
+            <h3 style="font-size:15px;font-weight:600;margin-bottom:16px"><i class="fa-solid fa-lock mr-2"
+                style="color:var(--gold)"></i>Change Password</h3>
+            <div class="form-group"><label class="form-label">Current Password</label><input type="password"
+                id="sCurrPwd" class="inp" placeholder="Current password" /></div>
+            <div class="form-group"><label class="form-label">New Password</label><input type="password" id="sNewPwd"
+                class="inp" placeholder="At least 6 characters" /></div>
+            <button class="btn btn-gold" onclick="changeStudentPassword()"><i class="fa-solid fa-key"></i> Change
+              Password</button>
+          </div>
+
+          <div class="card p-6" style="border-color:var(--danger-bdr)">
+            <h3 style="font-size:15px;font-weight:600;margin-bottom:8px;color:var(--danger)"><i
+                class="fa-solid fa-triangle-exclamation mr-2"></i>Danger Zone</h3>
+            <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Permanently delete your account and all exam
+              history.</p>
+            <button class="btn btn-danger" onclick="deleteStudentAccount()"><i class="fa-solid fa-trash"></i> Delete
+              Account</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  // @ts-nocheck
+  'use strict';
+
+  let _sidebarCollapsed = false;
+  function toggleSidebar() {
+    if (window.innerWidth < 1024) { openMobileMenu(); return; }
+    _sidebarCollapsed = !_sidebarCollapsed;
+    document.getElementById('sidebar').classList.toggle('collapsed', _sidebarCollapsed);
+    document.getElementById('mainContent').classList.toggle('full', _sidebarCollapsed);
+    document.getElementById('openSidebarBtn').style.display = _sidebarCollapsed ? '' : 'none';
+  }
+  function openMobileMenu() { document.getElementById('sidebar').classList.add('open'); document.getElementById('menuOverlay').classList.add('show'); }
+  function closeMobileMenu() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('menuOverlay').classList.remove('show'); }
+  window.addEventListener('resize', () => {
+    document.getElementById('mobileMenuBtn').style.display = window.innerWidth < 1024 ? '' : 'none';
+    if (window.innerWidth >= 1024) closeMobileMenu();
+  });
+  window.dispatchEvent(new Event('resize'));
+
+  let _currentSection = 'available';
+  function showSection(name) {
+    _currentSection = name;
+    document.querySelectorAll('.section-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('section' + name.charAt(0).toUpperCase() + name.slice(1))?.classList.add('active');
+    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+    const navMap = { available: 'navAvail', history: 'navHistory', account: 'navAccount' };
+    document.getElementById(navMap[name])?.classList.add('active');
+    const titles = { available: 'Available Exams', history: 'My Results', account: 'My Account' };
+    document.getElementById('pageTitle').textContent = titles[name] || name;
+    closeMobileMenu();
+    if (name === 'history') loadHistory();
+    if (name === 'account') loadStudentStats();
+  }
+
+  function refreshCurrent() {
+    if (_currentSection === 'available') loadAvailableExams();
+    else if (_currentSection === 'history') loadHistory();
+    else if (_currentSection === 'account') loadStudentStats();
+  }
+
+  function statusBadgeClass(s) { return { open: 'success', upcoming: 'accent', ended: '', inactive: 'danger' }[s] || ''; }
+  function scoreColor(s) { if (s == null) return 'var(--muted)'; if (s >= 8) return 'var(--success)'; if (s >= 5) return 'var(--gold)'; return 'var(--danger)'; }
+  function fmtDt(iso) { if (!iso) return ''; const d = new Date(iso); return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
+
+  async function loadAvailableExams() {
+    const data = await api('/api/student/available_exams');
+    if (!data.ok) return;
+    const list = document.getElementById('availableList'), empty = document.getElementById('availableEmpty');
+    if (!data.exams.length) { list.innerHTML = ''; empty.style.display = ''; return; }
+    empty.style.display = 'none';
+    list.innerHTML = data.exams.map(e => {
+      const ss = e.student_status, isOpen = e.status === 'open';
+      const canTake = isOpen && ss === 'not_started', done = ss === 'completed', inProg = ss === 'in_progress';
+      return `
+    <div class="exam-card ${canTake ? 'available' : ''}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+        <div>
+          <p style="font-size:16px;font-weight:700">${escHtml(e.name)}</p>
+          <p style="font-size:12px;color:var(--muted);margin-top:2px">
+            ${escHtml(e.course_name)}${e.course_code ? ' · ' + escHtml(e.course_code) : ''}
+            ${e.teacher_name ? ` · <i class="fa-solid fa-chalkboard-teacher" style="color:var(--accent)"></i> ${escHtml(e.teacher_name)}` : ''}
+          </p>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <span class="badge badge-${statusBadgeClass(e.status)}">${e.status}</span>
+          ${done ? '<span class="badge badge-success"><i class="fa-solid fa-check mr-1"></i>Attended</span>' : ''}
+          ${inProg ? '<span class="badge badge-warn"><i class="fa-solid fa-hourglass-half mr-1"></i>In Progress</span>' : ''}
+        </div>
+      </div>
+      ${e.description ? `<p style="font-size:13px;color:var(--text2);margin-bottom:10px">${escHtml(e.description)}</p>` : ''}
+      <div style="display:flex;gap:14px;font-size:12px;color:var(--muted);margin-bottom:12px;flex-wrap:wrap">
+        <span><i class="fa-solid fa-question-circle mr-1"></i>${e.questions_per_student} question${e.questions_per_student !== 1 ? 's' : ''}</span>
+        ${e.start_time ? `<span><i class="fa-solid fa-calendar-check mr-1"></i>${fmtDt(e.start_time)}</span>` : ''}
+        ${e.end_time ? `<span><i class="fa-solid fa-calendar-xmark mr-1"></i>${fmtDt(e.end_time)}</span>` : ''}
+      </div>
+      ${canTake ? `<a href="/student/exam/${e.id}" class="btn btn-primary" style="width:100%;padding:11px"><i class="fa-solid fa-play"></i> Start Exam</a>` : ''}
+      ${inProg ? `<a href="/student/exam/${e.id}" class="btn btn-gold"    style="width:100%;padding:11px"><i class="fa-solid fa-rotate-right"></i> Resume</a>` : ''}
+      ${done ? `<div class="btn btn-secondary" style="width:100%;cursor:default"><i class="fa-solid fa-check-circle" style="color:var(--success)"></i> Completed</div>` : ''}
+      ${!isOpen && !done ? `<div class="btn btn-secondary" style="width:100%;cursor:default;opacity:.6"><i class="fa-solid fa-lock mr-1"></i>${e.status === 'upcoming' ? 'Not open yet' : 'Exam ended'}</div>` : ''}
+    </div>`;
+    }).join('');
+  }
+
+  async function loadHistory() {
+    const data = await api('/api/student/my_results');
+    if (!data.ok) return;
+    const list = document.getElementById('historyList'), empty = document.getElementById('historyEmpty');
+    if (!data.results.length) { list.innerHTML = ''; empty.style.display = ''; return; }
+    empty.style.display = 'none';
+    list.innerHTML = data.results.map(r => `
+    <div class="exam-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+        <div>
+          <p style="font-weight:600;font-size:15px">${escHtml(r.exam_name)}</p>
+          <p style="font-size:12px;color:var(--muted);margin-top:2px">${r.started_at || ''}${r.completed_at ? ' → ' + r.completed_at : ' (in progress)'}</p>
+          ${r.helps_used && r.helps_used.length ? `<p style="font-size:11px;color:var(--muted);margin-top:4px"><i class="fa-solid fa-hand-holding-heart mr-1"></i>${r.helps_used.join(', ')}</p>` : ''}
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;color:${scoreColor(r.final_score)}">${r.final_score ?? '–'}</span>
+          <span style="color:var(--muted);font-size:13px"> / ${r.total_marks ?? 10}</span>
+          <p style="font-size:11px;color:var(--muted);margin-top:2px">${r.status}</p>
+        </div>
+      </div>
+      ${r.status === 'completed' ? `
+      <button class="btn btn-secondary btn-sm" onclick="openReview(${r.id})">
+        <i class="fa-solid fa-magnifying-glass"></i> Review My Answers
+      </button>`: ''}
+    </div>`).join('');
+  }
+
+  async function openReview(attemptId) {
+    const data = await api('/api/student/attempt/' + attemptId + '/review');
+    if (!data.ok) { toast(data.error, 'error'); return; }
+    const att = data.attempt, results = att.results || [], total = data.total_marks || 10;
+    const RC = { correct: 'Correct', wrong: 'Wrong', all_correct: 'Both Correct', partial: 'Partial', all_wrong: 'Both Wrong', timed_out: 'Timed Out' };
+    const COL = { correct: 'var(--success)', wrong: 'var(--danger)', all_correct: 'var(--success)', partial: 'var(--warn)', all_wrong: 'var(--danger)', timed_out: 'var(--warn)' };
+    const sc = att.final_score;
+    const scColor = sc >= total * .8 ? 'var(--success)' : sc >= total * .5 ? 'var(--gold)' : 'var(--danger)';
+
+    let html = '<div>';
+    html += '<h3 style="font-size:16px;font-weight:700;margin-bottom:4px">' + escHtml(att.exam_name) + '</h3>';
+    html += '<p style="font-size:13px;color:var(--muted);margin-bottom:16px">Score: <strong style="color:' + scColor + '">' + (sc ?? '–') + ' / ' + total + '</strong> &middot; ' + (att.completed_at || '') + '</p>';
+
+    if (!results.length) {
+      html += '<p style="color:var(--muted);text-align:center;padding:20px">No detailed results available.</p>';
+    } else {
+      results.forEach(function (r, i) {
+        const col = COL[r.result] || 'var(--muted)', lbl = RC[r.result] || r.result;
+        const qm = r.question_marks ? ' (worth ' + r.question_marks + ' mark' + (r.question_marks !== 1 ? 's' : '+') + ')' : '';
+        html += '<div style="border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;border-left:4px solid ' + col + '">';
+        html += '<p style="font-size:12px;font-weight:600;color:' + col + ';margin-bottom:6px">' + (i + 1) + '. ' + lbl + qm + '</p>';
+        html += '<p style="font-size:14px;font-weight:500;margin-bottom:10px">' + escHtml(r.question_text) + '</p>';
+        html += '<div style="display:flex;flex-direction:column;gap:4px">';
+        (r.options || []).forEach(function (o, oi) {
+          const sel = (r.selected || []).includes(o), right = (r.correct || []).includes(o);
+          const bg = right ? 'var(--success-bg)' : sel ? 'var(--danger-bg)' : 'transparent';
+          const bdr = right ? 'var(--success-bdr)' : sel ? 'var(--danger-bdr)' : 'var(--border)';
+          const clr = right ? 'var(--success)' : sel ? 'var(--danger)' : 'var(--text2)';
+          html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:7px;background:' + bg + ';border:1px solid ' + bdr + ';font-size:13px;color:' + clr + '">';
+          html += '<span style="font-weight:600;width:18px">' + String.fromCharCode(65 + oi) + '.</span>';
+          html += '<span style="flex:1">' + escHtml(o) + '</span>';
+          if (right) html += '<i class="fa-solid fa-check" style="color:var(--success)"></i>';
+          if (sel && !right) html += '<i class="fa-solid fa-xmark" style="color:var(--danger)"></i>';
+          html += '</div>';
+        });
+        html += '</div></div>';
+      });
+    }
+    html += '</div>';
+
+    const ov = document.createElement('div');
+    ov.style.cssText = 'position:fixed;inset:0;background:var(--modal-bg);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px';
+    const box = document.createElement('div');
+    box.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;max-width:600px;width:100%;max-height:85vh;overflow-y:auto;position:relative';
+    const closeBtn = document.createElement('button');
+    closeBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+    closeBtn.style.cssText = 'position:absolute;top:12px;right:12px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px';
+    closeBtn.onclick = function () { document.body.removeChild(ov); };
+    box.appendChild(closeBtn);
+    box.innerHTML += html;
+    ov.appendChild(box);
+    document.body.appendChild(ov);
+  }
+
+  async function loadStudentStats() {
+    const data = await api('/api/student/stats');
+    if (!data.ok) return;
+    document.getElementById('ss_total').textContent = data.total_attempts;
+    document.getElementById('ss_done').textContent = data.completed;
+    document.getElementById('ss_avg').textContent = data.avg_score ?? '–';
+    document.getElementById('ss_best').textContent = data.best_score ?? '–';
+  }
+
+  async function updateStudentProfile() {
+    const full_name = document.getElementById('sFullName').value.trim();
+    const email = document.getElementById('sEmail').value.trim();
+    if (!full_name || !email) { toast('All fields required.', 'error'); return; }
+    const data = await api('/api/student/update_profile', { full_name, email });
+    if (!data.ok) { toast(data.error, 'error'); return; }
+    toast('Profile updated.', 'success');
+    document.getElementById('sidebarName').textContent = full_name;
+  }
+
+  async function changeStudentPassword() {
+    const current_password = document.getElementById('sCurrPwd').value;
+    const new_password = document.getElementById('sNewPwd').value;
+    if (!current_password || !new_password) { toast('Fill in both fields.', 'error'); return; }
+    const data = await api('/api/student/change_password', { current_password, new_password });
+    if (!data.ok) { toast(data.error, 'error'); return; }
+    toast('Password changed.', 'success');
+    document.getElementById('sCurrPwd').value = '';
+    document.getElementById('sNewPwd').value = '';
+  }
+
+  async function deleteStudentAccount() {
+    const pwd = prompt('Enter your password to confirm:'); if (!pwd) return;
+    const data = await api('/api/student/delete_account', { password: pwd });
+    if (!data.ok) { toast(data.error, 'error'); return; }
+    window.location.href = data.redirect || '/';
+  }
+
+  document.addEventListener('DOMContentLoaded', loadAvailableExams);
+</script>
+{% endblock %}
