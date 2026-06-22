@@ -1,11 +1,12 @@
-{% extends "base.html" %} {% block title %}{{ exam.name }} - Oralify{% endblock
-%} {% block body %}
+{% extends "base.html" %}
+{% block title %}{{ exam.name }} – Oralify{% endblock %}
+{% block body %}
 <style>
   .exam-shell {
     min-height: 100vh;
     background: var(--bg);
     display: flex;
-    flex-direction: column;
+    flex-direction: column
   }
 
   .exam-topbar {
@@ -17,7 +18,7 @@
     justify-content: space-between;
     position: sticky;
     top: 0;
-    z-index: 30;
+    z-index: 30
   }
 
   .exam-body {
@@ -25,420 +26,233 @@
     display: flex;
     align-items: flex-start;
     justify-content: center;
-    padding: 24px 16px;
+    padding: 24px 16px
   }
 
   .exam-card-wrap {
     width: 100%;
-    max-width: 640px;
+    max-width: 640px
   }
 
   .step {
-    display: none;
+    display: none
   }
 
   .step.active {
-    display: block;
+    display: block
   }
 </style>
 
-<div class="exam-shell" id="examShell" data-exam-id="{{ exam.id }}">
+<div class="exam-shell">
+  <div id="examMeta" data-exam-id="{{ exam.id }}" data-total-marks="{{ exam.total_marks }}" style="display:none"></div>
   <div class="exam-topbar">
-    <div style="display: flex; align-items: center; gap: 10px; min-width: 0">
+    <div style="display:flex;align-items:center;gap:10px;min-width:0">
       <svg class="logo-icon" width="24" height="24" viewBox="0 0 36 36" fill="none">
         <circle cx="18" cy="18" r="17" stroke="var(--accent)" stroke-width="1.5" />
         <path d="M10 22 Q18 8 26 22" stroke="var(--accent2)" stroke-width="2" stroke-linecap="round" fill="none" />
         <circle cx="18" cy="24" r="3" fill="var(--accent)" />
       </svg>
-      <div style="min-width: 0">
-        <p style="
-            font-size: 14px;
-            font-weight: 600;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-          ">
-          {{ exam.name }}
-        </p>
-        <p style="font-size: 11px; color: var(--muted)">
-          {{ student.full_name }} · {{ student.student_id }}
-        </p>
+      <div style="min-width:0">
+        <p style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ exam.name
+          }}</p>
+        <p style="font-size:11px;color:var(--muted)">{{ student.full_name }} · {{ student.student_id }}</p>
       </div>
     </div>
-    <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0">
-      <div style="position: relative; width: 52px; height: 52px; flex-shrink: 0">
-        <svg style="position: absolute; inset: 0; transform: rotate(-90deg)" width="52" height="52" viewBox="0 0 52 52">
+    <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+      <div style="position:relative;width:52px;height:52px;flex-shrink:0">
+        <svg style="position:absolute;inset:0;transform:rotate(-90deg)" width="52" height="52" viewBox="0 0 52 52">
           <circle cx="26" cy="26" r="21" fill="none" stroke="var(--border)" stroke-width="4" />
           <circle id="timerRing" cx="26" cy="26" r="21" fill="none" stroke="var(--accent)" stroke-width="4"
             stroke-linecap="round" stroke-dasharray="131.9" stroke-dashoffset="0"
-            style="transition: stroke-dashoffset 0.9s linear" />
+            style="transition:stroke-dashoffset .9s linear" />
         </svg>
-        <span id="timerText" style="
-            position: absolute;
-            inset: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 13px;
-            font-weight: 700;
-          ">60</span>
+        <span id="timerText"
+          style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700">60</span>
       </div>
-      <div style="text-align: right">
-        <p style="font-size: 10px; color: var(--muted)">Score</p>
-        <p id="scoreDisplay" style="
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 20px;
-            font-weight: 700;
-            color: var(--gold);
-          ">
-          10.0
-        </p>
+      <div style="text-align:right">
+        <p style="font-size:10px;color:var(--muted)">Score</p>
+        <p id="scoreDisplay"
+          style="font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;color:var(--gold)">{{
+          "%.1f"|format(exam.total_marks) }}</p>
       </div>
-      <button class="theme-toggle" onclick="toggleTheme()">
-        <i class="fa-solid fa-moon theme-icon"></i>
-      </button>
+      <button class="theme-toggle" onclick="toggleTheme()"><i class="fa-solid fa-moon theme-icon"></i></button>
     </div>
   </div>
 
   <div class="exam-body">
     <div class="exam-card-wrap">
+
       <div class="step active" id="stepLoading">
-        <div class="card p-8" style="text-align: center">
-          <i class="fa-solid fa-spinner fa-spin" style="
-              font-size: 36px;
-              color: var(--accent);
-              display: block;
-              margin-bottom: 16px;
-            "></i>
-          <p style="color: var(--muted)">Loading your exam…</p>
+        <div class="card p-8" style="text-align:center">
+          <i class="fa-solid fa-spinner fa-spin"
+            style="font-size:36px;color:var(--accent);display:block;margin-bottom:16px"></i>
+          <p style="color:var(--muted)">Loading your exam…</p>
         </div>
       </div>
 
       <div class="step" id="stepQuestion">
-        <div style="margin-bottom: 14px">
-          <div style="
-              display: flex;
-              justify-content: space-between;
-              font-size: 12px;
-              color: var(--muted);
-              margin-bottom: 6px;
-            ">
-            <span>Question <span id="qNum">1</span> of
-              <span id="qTotal">?</span></span>
+        <div style="margin-bottom:14px">
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:6px">
+            <span>Question <span id="qNum">1</span> of <span id="qTotal">?</span></span>
             <span id="qProgress">0%</span>
           </div>
-          <div style="
-              height: 4px;
-              background: var(--border);
-              border-radius: 2px;
-              overflow: hidden;
-            ">
-            <div id="progressFill" style="
-                height: 100%;
-                background: linear-gradient(
-                  90deg,
-                  var(--accent),
-                  var(--accent2)
-                );
-                border-radius: 2px;
-                transition: width 0.4s;
-                width: 0%;
-              "></div>
+          <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden">
+            <div id="progressFill"
+              style="height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;transition:width .4s;width:0%">
+            </div>
           </div>
         </div>
 
-        <div class="card p-5" style="margin-bottom: 12px">
-          <div id="multiAnswerLabel" style="
-              display: none;
-              font-size: 11px;
-              font-weight: 600;
-              padding: 4px 10px;
-              border-radius: 20px;
-              display: inline-flex;
-              align-items: center;
-              gap: 5px;
-              margin-bottom: 10px;
-              background: rgba(79, 142, 247, 0.12);
-              color: var(--accent);
-            ">
+        <div class="card p-5" style="margin-bottom:12px">
+          <div id="multiAnswerLabel"
+            style="display:none;font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;display:inline-flex;align-items:center;gap:5px;margin-bottom:10px;background:rgba(79,142,247,.12);color:var(--accent)">
             <i class="fa-solid fa-check-double"></i><span id="multiAnswerText">Select 2 answers</span>
           </div>
-          <p id="questionText" style="
-              font-size: 16px;
-              font-weight: 500;
-              line-height: 1.6;
-              margin-bottom: 18px;
-            "></p>
-          <div id="optionsList" style="display: flex; flex-direction: column; gap: 8px"></div>
+          <p id="questionText" style="font-size:16px;font-weight:500;line-height:1.6;margin-bottom:18px"></p>
+          <div id="optionsList" style="display:flex;flex-direction:column;gap:8px"></div>
         </div>
 
-        <div id="hintBox" style="display: none; margin-bottom: 12px">
-          <div class="card p-4" style="border-left: 4px solid var(--accent2)">
-            <p style="
-                font-size: 11px;
-                font-weight: 600;
-                color: var(--accent2);
-                margin-bottom: 4px;
-              ">
-              <i class="fa-solid fa-lightbulb"></i> Hint
-            </p>
-            <p id="hintText" style="font-size: 13px; color: var(--text2)"></p>
+        <div id="hintBox" style="display:none;margin-bottom:12px">
+          <div class="card p-4" style="border-left:4px solid var(--accent2)">
+            <p style="font-size:11px;font-weight:600;color:var(--accent2);margin-bottom:4px"><i
+                class="fa-solid fa-lightbulb"></i> Hint</p>
+            <p id="hintText" style="font-size:13px;color:var(--text2)"></p>
           </div>
         </div>
 
-        <div style="display: flex; gap: 8px; margin-bottom: 12px">
-          <button id="btnSubmit" class="btn btn-primary" style="flex: 1; padding: 12px; font-size: 15px"
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <button id="btnSubmit" class="btn btn-primary" style="flex:1;padding:12px;font-size:15px"
             onclick="submitAnswer()" disabled>
             <i class="fa-solid fa-paper-plane"></i> Submit Answer
           </button>
-          <button class="btn btn-secondary" style="padding: 12px 14px" onclick="confirmFinish()" title="Finish early">
+          <button class="btn btn-secondary" style="padding:12px 14px" onclick="confirmFinish()" title="Finish early">
             <i class="fa-solid fa-flag-checkered"></i>
           </button>
         </div>
 
         <div class="card p-3" id="helpSection">
-          <p style="
-              font-size: 10px;
-              color: var(--muted);
-              margin-bottom: 8px;
-              font-weight: 600;
-              text-transform: uppercase;
-              letter-spacing: 0.06em;
-            ">
-            Helping Methods
-          </p>
-          <div id="helpButtons" style="
-              display: flex;
-              gap: 6px;
-              flex-wrap: nowrap;
-              overflow-x: auto;
-              padding-bottom: 2px;
-            "></div>
+          <p
+            style="font-size:10px;color:var(--muted);margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:.06em">
+            Helping Methods</p>
+          <div id="helpButtons" style="display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px"></div>
         </div>
       </div>
 
       <div class="step" id="stepResult">
-        <div class="card p-6" style="text-align: center">
-          <div id="resultBanner" style="margin-bottom: 20px"></div>
-          <div style="
-              display: grid;
-              grid-template-columns: 1fr 1fr;
-              gap: 12px;
-              margin-bottom: 20px;
-            ">
+        <div class="card p-6" style="text-align:center">
+          <div id="resultBanner" style="margin-bottom:20px"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
             <div class="card-inner p-4">
-              <p style="font-size: 11px; color: var(--muted); margin-bottom: 4px">
-                Score
-              </p>
-              <p id="resultScore" style="
-                  font-family: 'JetBrains Mono', monospace;
-                  font-size: 28px;
-                  font-weight: 700;
-                  color: var(--gold);
-                ">
-                -
-              </p>
+              <p style="font-size:11px;color:var(--muted);margin-bottom:4px">Score</p>
+              <p id="resultScore"
+                style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:var(--gold)">–</p>
             </div>
             <div class="card-inner p-4">
-              <p style="font-size: 11px; color: var(--muted); margin-bottom: 4px">
-                Next in
-              </p>
-              <p id="nextCountdown" style="
-                  font-family: 'JetBrains Mono', monospace;
-                  font-size: 28px;
-                  font-weight: 700;
-                  color: var(--accent2);
-                ">
-                3
-              </p>
+              <p style="font-size:11px;color:var(--muted);margin-bottom:4px">Next in</p>
+              <p id="nextCountdown"
+                style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:var(--accent2)">3</p>
             </div>
           </div>
-          <button class="btn btn-primary" style="width: 100%; padding: 12px" onclick="proceedToNextQuestion()">
+          <button class="btn btn-primary" style="width:100%;padding:12px" onclick="proceedToNextQuestion()">
             <i class="fa-solid fa-arrow-right"></i> Next Question
           </button>
         </div>
       </div>
 
       <div class="step" id="stepFinished">
-        <div class="card p-6 sm:p-8" style="display: flex; flex-direction: column; gap: 20px">
-          <div style="text-align: center">
-            <i class="fa-solid fa-circle-check" style="
-                font-size: 48px;
-                color: var(--success);
-                display: block;
-                margin-bottom: 12px;
-              "></i>
-            <h2 style="font-size: 22px; font-weight: 700">Exam Complete</h2>
-            <p style="color: var(--muted); margin-top: 4px">
-              {{ student.full_name }}
-            </p>
+        <div class="card p-6 sm:p-8" style="display:flex;flex-direction:column;gap:20px">
+          <div style="text-align:center">
+            <i class="fa-solid fa-circle-check"
+              style="font-size:48px;color:var(--success);display:block;margin-bottom:12px"></i>
+            <h2 style="font-size:22px;font-weight:700">Exam Complete</h2>
+            <p style="color:var(--muted);margin-top:4px">{{ student.full_name }}</p>
           </div>
 
           <div id="finishedResultBanner"></div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
-            <div class="card-inner p-4" style="text-align: center">
-              <p style="font-size: 11px; color: var(--muted); margin-bottom: 4px">
-                Final Score
-              </p>
-              <p id="finalScoreDisplay" style="
-                  font-family: 'JetBrains Mono', monospace;
-                  font-size: 32px;
-                  font-weight: 700;
-                  color: var(--gold);
-                ">
-                -
-              </p>
-              <p style="font-size: 11px; color: var(--muted)">out of 10</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="card-inner p-4" style="text-align:center">
+              <p style="font-size:11px;color:var(--muted);margin-bottom:4px">Final Score</p>
+              <p id="finalScoreDisplay"
+                style="font-family:'JetBrains Mono',monospace;font-size:32px;font-weight:700;color:var(--gold)">–</p>
+              <p id="finalScoreMax" style="font-size:11px;color:var(--muted)">out of {{ exam.total_marks }}</p>
             </div>
-            <div class="card-inner p-4" style="text-align: center">
-              <p style="font-size: 11px; color: var(--muted); margin-bottom: 4px">
-                Time Taken
-              </p>
-              <p id="timeTakenDisplay" style="
-                  font-family: 'JetBrains Mono', monospace;
-                  font-size: 28px;
-                  font-weight: 700;
-                  color: var(--accent2);
-                ">
-                -
-              </p>
-              <p style="font-size: 11px; color: var(--muted)">seconds</p>
+            <div class="card-inner p-4" style="text-align:center">
+              <p style="font-size:11px;color:var(--muted);margin-bottom:4px">Time Taken</p>
+              <p id="timeTakenDisplay"
+                style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:var(--accent2)">–</p>
+              <p style="font-size:11px;color:var(--muted)">seconds</p>
             </div>
           </div>
 
           <div class="card-inner p-4">
-            <p style="
-                font-size: 11px;
-                font-weight: 600;
-                color: var(--muted);
-                text-transform: uppercase;
-                letter-spacing: 0.06em;
-                margin-bottom: 10px;
-              ">
+            <p
+              style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">
               <i class="fa-solid fa-list-check mr-1"></i>Helping Methods Used
             </p>
             <div id="helpsUsedSummary"></div>
           </div>
 
-          <a href="/student/dashboard" class="btn btn-primary" style="
-              width: 100%;
-              padding: 12px;
-              font-size: 15px;
-              text-align: center;
-            ">
+          <a href="/student/dashboard" class="btn btn-primary"
+            style="width:100%;padding:12px;font-size:15px;text-align:center">
             <i class="fa-solid fa-house"></i> Back to Dashboard
           </a>
         </div>
       </div>
+
     </div>
   </div>
 </div>
 
 <div id="finishModal" class="modal-backdrop">
-  <div class="modal-box card p-6" style="max-width: 380px">
-    <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 8px">
-      Finish exam?
-    </h3>
-    <p style="font-size: 13px; color: var(--muted); margin-bottom: 20px">
-      Your current score will be shown for professor review.
-    </p>
-    <div style="display: flex; gap: 8px">
-      <button class="btn btn-secondary" style="flex: 1" onclick="closeModal('finishModal')">
-        Cancel
-      </button>
-      <button class="btn btn-danger" style="flex: 1" onclick="finishEarly()">
-        Yes, Finish
-      </button>
+  <div class="modal-box card p-6" style="max-width:380px">
+    <h3 style="font-size:16px;font-weight:600;margin-bottom:8px">Finish exam?</h3>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:20px">Your current score will be shown for professor
+      review.</p>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeModal('finishModal')">Cancel</button>
+      <button class="btn btn-danger" style="flex:1" onclick="finishEarly()">Yes, Finish</button>
     </div>
   </div>
 </div>
 
 <div id="askAiModal" class="modal-backdrop">
-  <div class="modal-box card p-5" style="max-width: 480px">
-    <div style="
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 14px;
-      ">
-      <h3 style="font-size: 15px; font-weight: 600">
-        <i class="fa-solid fa-robot mr-2" style="color: var(--accent)"></i>AI
-        Assistant
-      </h3>
-      <button onclick="closeModal('askAiModal')" style="
-          background: none;
-          border: none;
-          color: var(--muted);
-          cursor: pointer;
-          font-size: 18px;
-        ">
-        <i class="fa-solid fa-xmark"></i>
-      </button>
+  <div class="modal-box card p-5" style="max-width:480px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h3 style="font-size:15px;font-weight:600"><i class="fa-solid fa-robot mr-2" style="color:var(--accent)"></i>AI
+        Assistant</h3>
+      <button onclick="closeModal('askAiModal')"
+        style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px"><i
+          class="fa-solid fa-xmark"></i></button>
     </div>
-    <div id="aiHintLoading" style="text-align: center; padding: 20px; display: none">
-      <i class="fa-solid fa-spinner fa-spin" style="
-          font-size: 28px;
-          color: var(--accent);
-          display: block;
-          margin-bottom: 10px;
-        "></i>
-      <p style="font-size: 13px; color: var(--muted)">
-        AI is analysing the question…
-      </p>
+    <div id="aiHintLoading" style="text-align:center;padding:20px;display:none">
+      <i class="fa-solid fa-spinner fa-spin"
+        style="font-size:28px;color:var(--accent);display:block;margin-bottom:10px"></i>
+      <p style="font-size:13px;color:var(--muted)">AI is analysing the question…</p>
     </div>
-    <div id="aiHintResult" style="display: none">
-      <div style="
-          background: var(--inp-bg);
-          border: 1px solid var(--border);
-          border-radius: 10px;
-          padding: 14px;
-          margin-bottom: 12px;
-        ">
-        <p style="
-            font-size: 11px;
-            font-weight: 600;
-            color: var(--accent2);
-            margin-bottom: 6px;
-          ">
-          <i class="fa-solid fa-lightbulb mr-1"></i>AI Suggestion
-        </p>
-        <p id="aiHintText" style="font-size: 14px; line-height: 1.6; color: var(--text)"></p>
+    <div id="aiHintResult" style="display:none">
+      <div
+        style="background:var(--inp-bg);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px">
+        <p style="font-size:11px;font-weight:600;color:var(--accent2);margin-bottom:6px"><i
+            class="fa-solid fa-lightbulb mr-1"></i>AI Suggestion</p>
+        <p id="aiHintText" style="font-size:14px;line-height:1.6;color:var(--text)"></p>
       </div>
-      <div style="
-          background: var(--success-bg);
-          border: 1px solid var(--success-bdr);
-          border-radius: 10px;
-          padding: 12px;
-          margin-bottom: 12px;
-        ">
-        <p style="
-            font-size: 11px;
-            font-weight: 600;
-            color: var(--success);
-            margin-bottom: 6px;
-          ">
-          <i class="fa-solid fa-check-circle mr-1"></i>AI thinks the answer is
-        </p>
-        <p id="aiAnswerSuggestion" style="font-size: 14px; font-weight: 600; color: var(--success)"></p>
+      <div
+        style="background:var(--success-bg);border:1px solid var(--success-bdr);border-radius:10px;padding:12px;margin-bottom:12px">
+        <p style="font-size:11px;font-weight:600;color:var(--success);margin-bottom:6px"><i
+            class="fa-solid fa-check-circle mr-1"></i>AI thinks the answer is</p>
+        <p id="aiAnswerSuggestion" style="font-size:14px;font-weight:600;color:var(--success)"></p>
       </div>
-      <p style="font-size: 12px; color: var(--muted); margin-bottom: 10px">
-        <i class="fa-solid fa-triangle-exclamation mr-1" style="color: var(--warn)"></i>Using this deducts marks. The
-        choice is yours — the AI may be wrong.
-      </p>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px"><i class="fa-solid fa-triangle-exclamation mr-1"
+          style="color:var(--warn)"></i>Using this deducts marks. The choice is yours — the AI may be wrong.</p>
     </div>
     <div id="aiHintInitial">
-      <p style="font-size: 13px; color: var(--muted); margin-bottom: 14px">
-        Ask our built-in AI for a hint about the current question. This will
-        deduct marks from your score.
-      </p>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Ask our built-in AI for a hint about the current
+        question. This will deduct marks from your score.</p>
     </div>
-    <div style="display: flex; gap: 8px">
-      <button class="btn btn-secondary" style="flex: 1" onclick="closeModal('askAiModal')">
-        Cancel
-      </button>
-      <button class="btn btn-primary" style="flex: 1" id="askAiConfirmBtn" onclick="confirmAskAi()">
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeModal('askAiModal')">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" id="askAiConfirmBtn" onclick="confirmAskAi()">
         <i class="fa-solid fa-wand-magic-sparkles"></i> Ask AI (deducts mark)
       </button>
     </div>
@@ -446,134 +260,87 @@
 </div>
 
 <script>
-  "use strict";
+  'use strict';
 
-  const EXAM_ID = parseInt(
-    document.getElementById("examShell").dataset.examId,
-    10
-  );
+  const EXAM_ID = parseInt(document.getElementById('examMeta').dataset.examId, 10);
+  const TOTAL_MARKS = parseFloat(document.getElementById('examMeta').dataset.totalMarks);
   const st = {
-    attemptId: null,
-    currentScore: 10,
-    selectedOptions: new Set(),
-    currentOptions: [],
-    removedIndices: [],
-    isMultiAnswer: false,
-    numCorrect: 1,
-    usedHelps: new Set(),
-    timerInterval: null,
-    timerSeconds: 60,
-    timerMax: 60,
-    pendingNext: null,
-    startTime: null,
-    allowedHelps: [],
-    helpCosts: {},
+    attemptId: null, currentScore: 10, selectedOptions: new Set(),
+    currentOptions: [], removedIndices: [], isMultiAnswer: false, numCorrect: 1,
+    usedHelps: new Set(), timerInterval: null, timerSeconds: 60, timerMax: 60,
+    pendingNext: null, startTime: null, allowedHelps: [], helpCosts: {},
     totalQuestions: 1,
   };
 
   const HELP_META = {
-    hint: { icon: "fa-lightbulb", label: "Hint" },
-    remove_wrong: { icon: "fa-scissors", label: "×2" },
-    ask_ai: { icon: "fa-robot", label: "AI" },
-    ask_friend: { icon: "fa-user-group", label: "Friend" },
-    change_question: { icon: "fa-shuffle", label: "Skip" },
-    add_time: { icon: "fa-clock-rotate-left", label: "+1m" },
+    hint: { icon: 'fa-lightbulb', label: 'Hint' },
+    remove_wrong: { icon: 'fa-scissors', label: '×2' },
+    ask_ai: { icon: 'fa-robot', label: 'AI' },
+    ask_friend: { icon: 'fa-user-group', label: 'Friend' },
+    change_question: { icon: 'fa-shuffle', label: 'Skip' },
+    add_time: { icon: 'fa-clock-rotate-left', label: '+1m' },
   };
 
   const RESULT_CFG = {
-    correct: { icon: "fa-circle-check", color: "success", label: "Correct!" },
-    wrong: { icon: "fa-circle-xmark", color: "danger", label: "Wrong" },
-    all_correct: {
-      icon: "fa-check-double",
-      color: "success",
-      label: "Both correct!",
-    },
-    partial: {
-      icon: "fa-circle-half-stroke",
-      color: "warn",
-      label: "Partially correct (−1)",
-    },
-    all_wrong: {
-      icon: "fa-circle-xmark",
-      color: "danger",
-      label: "Both wrong (−2)",
-    },
-    timed_out: {
-      icon: "fa-clock",
-      color: "warn",
-      label: "Time's Up — Score fixed at 7",
-    },
+    correct: { icon: 'fa-circle-check', color: 'success', label: 'Correct!' },
+    wrong: { icon: 'fa-circle-xmark', color: 'danger', label: 'Wrong' },
+    all_correct: { icon: 'fa-check-double', color: 'success', label: 'Both correct!' },
+    partial: { icon: 'fa-circle-half-stroke', color: 'warn', label: 'Partially correct (−1)' },
+    all_wrong: { icon: 'fa-circle-xmark', color: 'danger', label: 'Both wrong (−2)' },
+    timed_out: { icon: 'fa-clock', color: 'warn', label: "Time's Up — Score fixed at 7" },
   };
 
   function showStep(id) {
-    document
-      .querySelectorAll(".step")
-      .forEach((s) => s.classList.remove("active"));
-    document.getElementById(id)?.classList.add("active");
+    document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+    document.getElementById(id)?.classList.add('active');
   }
 
   const CIRC = 131.9;
   function startTimer(seconds) {
     stopTimer();
-    st.timerSeconds = seconds;
-    st.timerMax = seconds;
+    st.timerSeconds = seconds; st.timerMax = seconds;
     updateTimerDisplay(seconds);
     st.timerInterval = setInterval(async () => {
       st.timerSeconds--;
       updateTimerDisplay(st.timerSeconds);
       const offset = CIRC * (1 - st.timerSeconds / st.timerMax);
-      document.getElementById("timerRing").style.strokeDashoffset = offset;
-      document.getElementById("timerRing").style.stroke =
-        st.timerSeconds <= 10 ? "var(--danger)" : "var(--accent)";
+      document.getElementById('timerRing').style.strokeDashoffset = offset;
+      document.getElementById('timerRing').style.stroke = st.timerSeconds <= 10 ? 'var(--danger)' : 'var(--accent)';
       if (st.timerSeconds <= 0) {
         stopTimer();
-        toast("Time's up! Auto-submitting…", "info");
+        toast("Time's up! Auto-submitting…", 'info');
         if (st.selectedOptions.size === 0) {
-          const avail = st.currentOptions.filter(
-            (_, i) => !st.removedIndices.includes(i)
-          );
+          const avail = st.currentOptions.filter((_, i) => !st.removedIndices.includes(i));
           if (avail.length) st.selectedOptions = new Set([avail[0]]);
         }
         await submitAnswer(true);
       }
     }, 1000);
   }
-  function stopTimer() {
-    clearInterval(st.timerInterval);
-  }
-  function updateTimerDisplay(s) {
-    const el = document.getElementById("timerText");
-    if (el) el.textContent = Math.max(0, s);
-  }
+  function stopTimer() { clearInterval(st.timerInterval); }
+  function updateTimerDisplay(s) { const el = document.getElementById('timerText'); if (el) el.textContent = Math.max(0, s); }
 
   function updateScore(score) {
     st.currentScore = score;
-    const el = document.getElementById("scoreDisplay");
+    const el = document.getElementById('scoreDisplay');
     if (!el) return;
     el.textContent = score.toFixed(1);
-    el.style.color =
-      score >= 8
-        ? "var(--success)"
-        : score >= 5
-          ? "var(--gold)"
-          : "var(--danger)";
+    el.style.color = score >= TOTAL_MARKS * .8 ? 'var(--success)' : score >= TOTAL_MARKS * .5 ? 'var(--gold)' : 'var(--danger)';
   }
 
   function scoreColor(s) {
-    if (s == null) return "var(--muted)";
-    if (s >= 8) return "var(--success)";
-    if (s >= 5) return "var(--gold)";
-    return "var(--danger)";
+    if (s == null) return 'var(--muted)';
+    if (s >= TOTAL_MARKS * .8) return 'var(--success)';
+    if (s >= TOTAL_MARKS * .5) return 'var(--gold)';
+    return 'var(--danger)';
   }
 
   async function startExam() {
     st.startTime = Date.now();
-    const data = await api("/api/student/start_exam", { exam_id: EXAM_ID });
+    const data = await api('/api/student/start_exam', { exam_id: EXAM_ID });
     if (!data.ok) {
-      toast(data.error || "Could not start exam.", "error");
-      setTimeout(() => {
-        window.location.href = "/student/dashboard";
-      }, 2000);
+      toast(data.error || 'Could not start exam.', 'error');
+      setTimeout(() => { window.location.href = '/student/dashboard'; }, 2000);
       return;
     }
     st.attemptId = data.attempt_id;
@@ -582,34 +349,24 @@
     st.totalQuestions = data.total_questions || 1;
     updateScore(data.score);
     buildHelpButtons();
-    loadQuestion(
-      data.question,
-      data.question_index,
-      data.total_questions,
-      data.timer_seconds
-    );
+    loadQuestion(data.question, data.question_index, data.total_questions, data.timer_seconds);
   }
 
   function buildHelpButtons() {
-    const wrap = document.getElementById("helpButtons");
-    const sect = document.getElementById("helpSection");
-    if (!st.allowedHelps.length) {
-      sect.style.display = "none";
-      return;
-    }
-    wrap.innerHTML = st.allowedHelps
-      .map((h) => {
-        const m = HELP_META[h] || { icon: "fa-question", label: h };
-        const cost = st.helpCosts[h] ?? 1;
-        return `<button class="help-btn" data-help="${h}" id="helpBtn_${h}" onclick="useHelp('${h}')">
-        <i class="fa-solid ${m.icon}"></i><span>${m.label}</span><span class="cost">−${cost}</span>
-      </button>`;
-      })
-      .join("");
+    const wrap = document.getElementById('helpButtons');
+    const sect = document.getElementById('helpSection');
+    if (!st.allowedHelps.length) { sect.style.display = 'none'; return; }
+    wrap.innerHTML = st.allowedHelps.map(h => {
+      const m = HELP_META[h] || { icon: 'fa-question', label: h };
+      const cost = st.helpCosts[h] ?? 1;
+      return `<button class="help-btn" data-help="${h}" id="helpBtn_${h}" onclick="useHelp('${h}')">
+      <i class="fa-solid ${m.icon}"></i><span>${m.label}</span><span class="cost">−${cost}</span>
+    </button>`;
+    }).join('');
   }
 
   function refreshHelpButtons() {
-    document.querySelectorAll(".help-btn").forEach((btn) => {
+    document.querySelectorAll('.help-btn').forEach(btn => {
       btn.disabled = st.usedHelps.has(btn.dataset.help);
     });
   }
@@ -621,44 +378,42 @@
     st.isMultiAnswer = q.multi_answer || false;
     st.numCorrect = q.num_correct || 1;
 
-    const pct = Math.round((idx / total) * 100);
-    document.getElementById("qNum").textContent = idx + 1;
-    document.getElementById("qTotal").textContent = total;
-    document.getElementById("qProgress").textContent = pct + "%";
-    document.getElementById("progressFill").style.width = pct + "%";
+    const pct = Math.round(((idx) / (total)) * 100);
+    document.getElementById('qNum').textContent = idx + 1;
+    document.getElementById('qTotal').textContent = total;
+    document.getElementById('qProgress').textContent = pct + '%';
+    document.getElementById('progressFill').style.width = pct + '%';
 
-    const ml = document.getElementById("multiAnswerLabel");
+    const ml = document.getElementById('multiAnswerLabel');
     if (st.isMultiAnswer) {
-      ml.style.display = "inline-flex";
-      document.getElementById("multiAnswerText").textContent = `Select ${st.numCorrect
-        } answer${st.numCorrect > 1 ? "s" : ""}`;
+      ml.style.display = 'inline-flex';
+      document.getElementById('multiAnswerText').textContent = `Select ${st.numCorrect} answer${st.numCorrect > 1 ? 's' : ''}`;
     } else {
-      ml.style.display = "none";
+      ml.style.display = 'none';
     }
 
-    document.getElementById("questionText").textContent = q.text;
-    document.getElementById("hintBox").style.display = "none";
-    document.getElementById("btnSubmit").disabled = true;
+    document.getElementById('questionText').textContent = q.text;
+    document.getElementById('hintBox').style.display = 'none';
+    document.getElementById('btnSubmit').disabled = true;
     renderOptions();
     refreshHelpButtons();
-    showStep("stepQuestion");
+    showStep('stepQuestion');
     startTimer(timerSecs || 60);
   }
 
   function renderOptions() {
-    const list = document.getElementById("optionsList");
-    list.innerHTML = "";
+    const list = document.getElementById('optionsList');
+    list.innerHTML = '';
     st.currentOptions.forEach((opt, idx) => {
-      const btn = document.createElement("button");
-      btn.className = "option-btn";
+      const btn = document.createElement('button');
+      btn.className = 'option-btn';
       btn.dataset.opt = opt;
       btn.dataset.idx = idx;
-      if (st.removedIndices.includes(idx)) btn.classList.add("removed");
+      if (st.removedIndices.includes(idx)) btn.classList.add('removed');
       if (st.isMultiAnswer) {
-        const cb = document.createElement("span");
-        cb.id = "cb_" + idx;
-        cb.style.cssText =
-          "display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-radius:3px;vertical-align:middle;margin-right:10px;flex-shrink:0;transition:all .15s";
+        const cb = document.createElement('span');
+        cb.id = 'cb_' + idx;
+        cb.style.cssText = 'display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-radius:3px;vertical-align:middle;margin-right:10px;flex-shrink:0;transition:all .15s';
         btn.appendChild(cb);
         btn.appendChild(document.createTextNode(opt));
       } else {
@@ -670,80 +425,52 @@
   }
 
   function selectOption(opt, idx, btn) {
-    if (btn.disabled || btn.classList.contains("removed")) return;
+    if (btn.disabled || btn.classList.contains('removed')) return;
     if (st.isMultiAnswer) {
       if (st.selectedOptions.has(opt)) {
         st.selectedOptions.delete(opt);
-        btn.classList.remove("selected");
-        const cb = document.getElementById("cb_" + idx);
-        if (cb) {
-          cb.style.background = "";
-          cb.style.borderColor = "var(--border)";
-          cb.innerHTML = "";
-        }
+        btn.classList.remove('selected');
+        const cb = document.getElementById('cb_' + idx);
+        if (cb) { cb.style.background = ''; cb.style.borderColor = 'var(--border)'; cb.innerHTML = ''; }
       } else {
-        if (st.selectedOptions.size >= st.numCorrect) {
-          toast(
-            "You can only select " +
-            st.numCorrect +
-            " answer" +
-            (st.numCorrect > 1 ? "s" : "") +
-            ".",
-            "info"
-          );
-          return;
-        }
+        if (st.selectedOptions.size >= st.numCorrect) { toast('You can only select ' + st.numCorrect + ' answer' + (st.numCorrect > 1 ? 's' : '') + '.', 'info'); return; }
         st.selectedOptions.add(opt);
-        btn.classList.add("selected");
-        const cb = document.getElementById("cb_" + idx);
+        btn.classList.add('selected');
+        const cb = document.getElementById('cb_' + idx);
         if (cb) {
-          cb.style.background = "var(--accent)";
-          cb.style.borderColor = "var(--accent)";
-          cb.innerHTML =
-            '<svg viewBox="0 0 10 10" width="12" height="12"><polyline points="1.5,5 4,7.5 8.5,2.5" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>';
+          cb.style.background = 'var(--accent)'; cb.style.borderColor = 'var(--accent)';
+          cb.innerHTML = '<svg viewBox="0 0 10 10" width="12" height="12"><polyline points="1.5,5 4,7.5 8.5,2.5" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>';
         }
       }
-      document.getElementById("btnSubmit").disabled =
-        st.selectedOptions.size === 0;
+      document.getElementById('btnSubmit').disabled = st.selectedOptions.size === 0;
     } else {
       st.selectedOptions = new Set([opt]);
-      document
-        .querySelectorAll(".option-btn")
-        .forEach((b) => b.classList.remove("selected"));
-      btn.classList.add("selected");
-      document.getElementById("btnSubmit").disabled = false;
+      document.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      document.getElementById('btnSubmit').disabled = false;
     }
   }
 
   async function submitAnswer(timedOut = false) {
     if (!timedOut && st.selectedOptions.size === 0) return;
     stopTimer();
-    document.getElementById("btnSubmit").disabled = true;
-    document
-      .querySelectorAll(".option-btn")
-      .forEach((b) => (b.disabled = true));
+    document.getElementById('btnSubmit').disabled = true;
+    document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
 
     const selected = Array.from(st.selectedOptions);
-    const data = await api("/api/student/submit_answer", {
-      attempt_id: st.attemptId,
-      selected_options: selected,
-      timed_out: timedOut,
+    const data = await api('/api/student/submit_answer', {
+      attempt_id: st.attemptId, selected_options: selected, timed_out: timedOut
     });
-    if (!data.ok) {
-      toast(data.error, "error");
-      return;
-    }
+    if (!data.ok) { toast(data.error, 'error'); return; }
 
     updateScore(data.score);
 
-    const correctSet = new Set(
-      (data.correct_answers || []).map((s) => s.trim())
-    );
-    const selectedSet = new Set(selected.map((s) => s.trim()));
-    document.querySelectorAll(".option-btn").forEach((btn) => {
-      const opt = (btn.dataset.opt || "").trim() || btn.textContent.trim();
-      if (correctSet.has(opt)) btn.classList.add("correct");
-      else if (selectedSet.has(opt)) btn.classList.add("incorrect");
+    const correctSet = new Set((data.correct_answers || []).map(s => s.trim()));
+    const selectedSet = new Set(selected.map(s => s.trim()));
+    document.querySelectorAll('.option-btn').forEach(btn => {
+      const opt = (btn.dataset.opt || '').trim() || btn.textContent.trim();
+      if (correctSet.has(opt)) btn.classList.add('correct');
+      else if (selectedSet.has(opt)) btn.classList.add('incorrect');
     });
 
     if (data.finished) {
@@ -755,36 +482,29 @@
   }
 
   function showResultStep(data) {
-    const rScore = document.getElementById("resultScore");
+    const rScore = document.getElementById('resultScore');
     rScore.textContent = data.score.toFixed(1);
     rScore.style.color = scoreColor(data.score);
 
-    const cfg = RESULT_CFG[data.result] || RESULT_CFG["wrong"];
-    document.getElementById("resultBanner").innerHTML = `
-      <div style="padding:14px;border-radius:10px;border:1px solid var(--${cfg.color
-      }-bdr);background:var(--${cfg.color}-bg);text-align:center">
-        <i class="fa-solid ${cfg.icon}" style="font-size:24px;color:var(--${cfg.color
-      });display:block;margin-bottom:6px"></i>
-        <p style="font-weight:600;color:var(--${cfg.color})">${cfg.label}</p>
-        <p style="font-size:12px;color:var(--muted);margin-top:4px">
-          Correct: <span style="color:var(--text);font-weight:500">${escHtml(
-        (data.correct_answers || []).join(" & ")
-      )}</span>
-        </p>
-      </div>`;
+    const cfg = RESULT_CFG[data.result] || RESULT_CFG['wrong'];
+    document.getElementById('resultBanner').innerHTML = `
+    <div style="padding:14px;border-radius:10px;border:1px solid var(--${cfg.color}-bdr);background:var(--${cfg.color}-bg);text-align:center">
+      <i class="fa-solid ${cfg.icon}" style="font-size:24px;color:var(--${cfg.color});display:block;margin-bottom:6px"></i>
+      <p style="font-weight:600;color:var(--${cfg.color})">${cfg.label}</p>
+      <p style="font-size:12px;color:var(--muted);margin-top:4px">
+        Correct: <span style="color:var(--text);font-weight:500">${escHtml((data.correct_answers || []).join(' & '))}</span>
+      </p>
+    </div>`;
 
-    showStep("stepResult");
+    showStep('stepResult');
 
     let countdown = 3;
-    document.getElementById("nextCountdown").textContent = countdown;
+    document.getElementById('nextCountdown').textContent = countdown;
     const iv = setInterval(() => {
       countdown--;
-      const el = document.getElementById("nextCountdown");
+      const el = document.getElementById('nextCountdown');
       if (el) el.textContent = countdown;
-      if (countdown <= 0) {
-        clearInterval(iv);
-        proceedToNextQuestion();
-      }
+      if (countdown <= 0) { clearInterval(iv); proceedToNextQuestion(); }
     }, 1000);
   }
 
@@ -792,196 +512,122 @@
     const data = st.pendingNext;
     if (!data) return;
     st.pendingNext = null;
-    loadQuestion(
-      data.next_question,
-      data.question_index,
-      st.totalQuestions,
-      data.timer_seconds
-    );
+    loadQuestion(data.next_question, data.question_index, st.totalQuestions, data.timer_seconds);
   }
 
-  function confirmFinish() {
-    openModal("finishModal");
-  }
+  function confirmFinish() { openModal('finishModal'); }
 
   async function finishEarly() {
-    closeModal("finishModal");
-    stopTimer();
-    const data = await api("/api/student/finish_early", {
-      attempt_id: st.attemptId,
-    });
-    if (!data.ok) {
-      toast(data.error, "error");
-      return;
-    }
-    showFinished({
-      score: data.score,
-      helps_used: data.helps_used,
-      result: null,
-      correct_answers: [],
-    });
+    closeModal('finishModal'); stopTimer();
+    const data = await api('/api/student/finish_early', { attempt_id: st.attemptId });
+    if (!data.ok) { toast(data.error, 'error'); return; }
+    showFinished({ score: data.score, helps_used: data.helps_used, result: null, correct_answers: [] });
   }
 
   function showFinished(data) {
     stopTimer();
-    const elapsed = st.startTime
-      ? Math.round((Date.now() - st.startTime) / 1000)
-      : "-";
+    const elapsed = st.startTime ? Math.round((Date.now() - st.startTime) / 1000) : '–';
     const score = data.score;
     const helps = data.helps_used || [];
 
-    document.getElementById("finalScoreDisplay").textContent =
-      score != null ? score.toFixed(1) : "-";
-    document.getElementById("finalScoreDisplay").style.color =
-      scoreColor(score);
-    document.getElementById("timeTakenDisplay").textContent = elapsed;
+    document.getElementById('finalScoreDisplay').textContent = score != null ? score.toFixed(1) : '–';
+    document.getElementById('finalScoreDisplay').style.color = scoreColor(score);
+    document.getElementById('timeTakenDisplay').textContent = elapsed;
 
-    const fbanner = document.getElementById("finishedResultBanner");
+    const fbanner = document.getElementById('finishedResultBanner');
     if (data.result) {
-      const cfg = RESULT_CFG[data.result] || RESULT_CFG["wrong"];
+      const cfg = RESULT_CFG[data.result] || RESULT_CFG['wrong'];
       fbanner.innerHTML = `
-        <div style="padding:12px 16px;border-radius:10px;border:1px solid var(--${cfg.color
-        }-bdr);background:var(--${cfg.color
-        }-bg);text-align:center;margin-bottom:4px">
-          <i class="fa-solid ${cfg.icon}" style="color:var(--${cfg.color})"></i>
-          <span style="font-weight:600;color:var(--${cfg.color
-        });margin-left:8px">${cfg.label}</span>
-          ${data.correct_answers && data.correct_answers.length
-          ? `<p style="font-size:12px;color:var(--muted);margin-top:4px">Correct: <span style="color:var(--text)">${escHtml(
-            (data.correct_answers || []).join(" & ")
-          )}</span></p>`
-          : ""
-        }
-        </div>`;
-    } else {
-      fbanner.innerHTML = "";
-    }
+      <div style="padding:12px 16px;border-radius:10px;border:1px solid var(--${cfg.color}-bdr);background:var(--${cfg.color}-bg);text-align:center;margin-bottom:4px">
+        <i class="fa-solid ${cfg.icon}" style="color:var(--${cfg.color})"></i>
+        <span style="font-weight:600;color:var(--${cfg.color});margin-left:8px">${cfg.label}</span>
+        ${data.correct_answers && data.correct_answers.length ? `<p style="font-size:12px;color:var(--muted);margin-top:4px">Correct: <span style="color:var(--text)">${escHtml((data.correct_answers || []).join(' & '))}</span></p>` : ''}
+      </div>`;
+    } else { fbanner.innerHTML = ''; }
 
-    const HELP_LABELS = {
-      hint: "Hint (−0.5)",
-      remove_wrong: "Remove 2 (−1)",
-      ask_ai: "Ask AI (−1)",
-      ask_friend: "Ask Friend (−1)",
-      change_question: "Skip (−1)",
-      add_time: "Add 1 min (−1)",
+    const HELP_NAMES = {
+      hint: 'Hint', remove_wrong: 'Remove 2 Wrong', ask_ai: 'Ask AI',
+      ask_friend: 'Ask Friend', change_question: 'Skip Question', add_time: 'Add 1 min',
     };
-    const helpDiv = document.getElementById("helpsUsedSummary");
+    const helpDiv = document.getElementById('helpsUsedSummary');
     if (!helps.length) {
-      helpDiv.innerHTML =
-        '<p style="font-size:13px;color:var(--success)"><i class="fa-solid fa-star mr-1"></i>No helping methods used.</p>';
+      helpDiv.innerHTML = '<p style="font-size:13px;color:var(--success)"><i class="fa-solid fa-star mr-1"></i>No helping methods used.</p>';
     } else {
-      helpDiv.innerHTML = helps
-        .map(
-          (h) => `
-        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--text2)">
-          <span>${HELP_LABELS[h] || h}</span>
-        </div>`
-        )
-        .join("");
+      helpDiv.innerHTML = helps.map(h => {
+        const cost = st.helpCosts[h] ?? 1;
+        const name = HELP_NAMES[h] || h;
+        return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--text2)">'
+          + '<span>' + name + '</span><span style="font-family:monospace;color:var(--danger)">−' + cost + '</span>'
+          + '</div>';
+      }).join('');
     }
-    showStep("stepFinished");
+    showStep('stepFinished');
   }
 
+
+
   async function useHelp(type) {
-    if (type === "ask_ai") {
-      openAiHintModal();
-      return;
-    }
+    if (type === 'ask_ai') { openAiHintModal(); return; }
     await _doHelp(type);
   }
 
   function openAiHintModal() {
     // Reset modal state
-    document.getElementById("aiHintLoading").style.display = "none";
-    document.getElementById("aiHintResult").style.display = "none";
-    document.getElementById("aiHintInitial").style.display = "";
-    document.getElementById("askAiConfirmBtn").disabled = false;
-    document.getElementById("askAiConfirmBtn").innerHTML =
-      '<i class="fa-solid fa-wand-magic-sparkles"></i> Ask AI (deducts mark)';
-    openModal("askAiModal");
+    document.getElementById('aiHintLoading').style.display = 'none';
+    document.getElementById('aiHintResult').style.display = 'none';
+    document.getElementById('aiHintInitial').style.display = '';
+    document.getElementById('askAiConfirmBtn').disabled = false;
+    document.getElementById('askAiConfirmBtn').innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Ask AI (deducts mark)';
+    openModal('askAiModal');
   }
 
   async function confirmAskAi() {
-    const btn = document.getElementById("askAiConfirmBtn");
+    const btn = document.getElementById('askAiConfirmBtn');
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Asking…';
-    document.getElementById("aiHintInitial").style.display = "none";
-    document.getElementById("aiHintLoading").style.display = "";
+    document.getElementById('aiHintInitial').style.display = 'none';
+    document.getElementById('aiHintLoading').style.display = '';
 
     // Call backend — deduct score first, then call Groq for in-app suggestion
-    const data = await api("/api/student/use_help", {
-      attempt_id: st.attemptId,
-      help_type: "ask_ai",
-    });
+    const data = await api('/api/student/use_help', { attempt_id: st.attemptId, help_type: 'ask_ai' });
 
-    document.getElementById("aiHintLoading").style.display = "none";
+    document.getElementById('aiHintLoading').style.display = 'none';
 
-    if (!data.ok) {
-      toast(data.error, "error");
-      closeModal("askAiModal");
-      return;
-    }
-    st.usedHelps.add("ask_ai");
-    refreshHelpButtons();
-    updateScore(data.score);
+    if (!data.ok) { toast(data.error, 'error'); closeModal('askAiModal'); return; }
+    st.usedHelps.add('ask_ai'); refreshHelpButtons(); updateScore(data.score);
 
     // Show AI suggestion
-    document.getElementById("aiHintText").textContent =
-      data.ai_hint ||
-      "Think carefully about each option and eliminate unlikely ones.";
-    document.getElementById("aiAnswerSuggestion").textContent =
-      data.ai_answer || "No specific suggestion available.";
-    document.getElementById("aiHintResult").style.display = "";
+    document.getElementById('aiHintText').textContent = data.ai_hint || 'Think carefully about each option and eliminate unlikely ones.';
+    document.getElementById('aiAnswerSuggestion').textContent = data.ai_answer || 'No specific suggestion available.';
+    document.getElementById('aiHintResult').style.display = '';
     btn.innerHTML = '<i class="fa-solid fa-check"></i> Done';
-    btn.onclick = () => closeModal("askAiModal");
+    btn.onclick = () => closeModal('askAiModal');
     btn.disabled = false;
   }
 
   async function _doHelp(type) {
-    const data = await api("/api/student/use_help", {
-      attempt_id: st.attemptId,
-      help_type: type,
-    });
-    if (!data.ok) {
-      toast(data.error, "error");
-      return;
-    }
-    st.usedHelps.add(type);
-    refreshHelpButtons();
-    updateScore(data.score);
-    if (type === "hint") {
-      document.getElementById("hintText").textContent = data.hint;
-      document.getElementById("hintBox").style.display = "";
-    } else if (type === "remove_wrong") {
+    const data = await api('/api/student/use_help', { attempt_id: st.attemptId, help_type: type });
+    if (!data.ok) { toast(data.error, 'error'); return; }
+    st.usedHelps.add(type); refreshHelpButtons(); updateScore(data.score);
+    if (type === 'hint') {
+      document.getElementById('hintText').textContent = data.hint;
+      document.getElementById('hintBox').style.display = '';
+    } else if (type === 'remove_wrong') {
       st.removedIndices = data.remove_indices || [];
       renderOptions();
-      const removed = new Set(
-        st.removedIndices.map((i) => st.currentOptions[i])
-      );
+      const removed = new Set(st.removedIndices.map(i => st.currentOptions[i]));
       for (const o of removed) st.selectedOptions.delete(o);
-      document.getElementById("btnSubmit").disabled =
-        st.selectedOptions.size === 0;
-    } else if (type === "change_question") {
-      stopTimer();
-      st.selectedOptions = new Set();
-      st.removedIndices = [];
-      loadQuestion(
-        data.question,
-        data.question_index,
-        st.totalQuestions,
-        data.timer_seconds
-      );
-    } else if (type === "add_time") {
-      st.timerSeconds += data.extra_seconds || 60;
-      st.timerMax += data.extra_seconds || 60;
-      toast("+60 seconds added!", "success");
-    } else if (type === "ask_friend") {
-      toast("Mark deducted. Ask your friend!", "info");
-    } else if (type === "ask_ai") {
-      toast("Mark deducted. Check your device!", "info");
-    }
+      document.getElementById('btnSubmit').disabled = st.selectedOptions.size === 0;
+    } else if (type === 'change_question') {
+      stopTimer(); st.selectedOptions = new Set(); st.removedIndices = [];
+      loadQuestion(data.question, data.question_index, st.totalQuestions, data.timer_seconds);
+    } else if (type === 'add_time') {
+      st.timerSeconds += (data.extra_seconds || 60); st.timerMax += (data.extra_seconds || 60);
+      toast('+60 seconds added!', 'success');
+    } else if (type === 'ask_friend') { toast('Mark deducted. Ask your friend!', 'info'); }
+    else if (type === 'ask_ai') { toast('Mark deducted. Check your device!', 'info'); }
   }
 
-  document.addEventListener("DOMContentLoaded", startExam);
+  document.addEventListener('DOMContentLoaded', startExam);
 </script>
 {% endblock %}

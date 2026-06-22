@@ -518,8 +518,10 @@
 
 <!-- ══ EDIT EXAM MODAL ══ -->
 <div id="editExamModal" class="modal-backdrop">
-  <div class="modal-box card p-5" style="max-width:600px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+  <div class="modal-box card"
+    style="max-width:600px;max-height:90vh;display:flex;flex-direction:column;padding:0;overflow-y:hidden">
+    <div
+      style="display:flex;justify-content:space-between;align-items:center;padding:20px 20px 14px 20px;flex-shrink:0;border-bottom:1px solid var(--border)">
       <h3 style="font-size:15px;font-weight:600"><i class="fa-solid fa-pen-to-square mr-2"
           style="color:var(--accent)"></i>Edit Exam Settings</h3>
       <button onclick="closeModal('editExamModal')"
@@ -527,10 +529,12 @@
           class="fa-solid fa-xmark"></i></button>
     </div>
     <input type="hidden" id="editExamId" />
-    <div id="editExamFormContent"></div>
-    <button class="btn btn-primary" style="width:100%;padding:11px;margin-top:4px" onclick="saveExamEdit()">
-      <i class="fa-solid fa-save"></i> Save Changes
-    </button>
+    <div id="editExamFormContent" style="overflow-y:auto;flex:1;padding:16px 20px"></div>
+    <div style="flex-shrink:0;padding:14px 20px;border-top:1px solid var(--border)">
+      <button class="btn btn-primary" style="width:100%;padding:11px" onclick="saveExamEdit()">
+        <i class="fa-solid fa-save"></i> Save Changes
+      </button>
+    </div>
   </div>
 </div>
 
@@ -575,7 +579,8 @@
 
 <!-- ══ RESULTS MODAL ══ -->
 <div id="resultsModal" class="modal-backdrop">
-  <div class="modal-box card p-5" style="max-width:760px;max-height:88vh;display:flex;flex-direction:column">
+  <div class="modal-box card p-5"
+    style="max-width:760px;max-height:88vh;display:flex;flex-direction:column;overflow-y:hidden">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
       <h3 style="font-size:15px;font-weight:600"><i class="fa-solid fa-trophy mr-2" style="color:var(--gold)"></i>Exam
         Results</h3>
@@ -732,8 +737,14 @@
     add_time: { icon: 'fa-clock-rotate-left', label: 'Add 1 min', defaultCost: 1 },
   };
 
-  function statusBadge(s) { return { open: 'success', upcoming: 'accent', ended: '', inactive: 'danger' }[s] || ''; }
-  function scoreColor(s) { if (s == null) return 'var(--muted)'; if (s >= 8) return 'var(--success)'; if (s >= 5) return 'var(--gold)'; return 'var(--danger)'; }
+  function statusBadge(s) { return { open: 'success', upcoming: 'accent', ended: '', inactive: 'danger', draft: 'warn' }[s] || ''; }
+  function scoreColor(s, max) {
+    max = max || 10;
+    if (s == null) return 'var(--muted)';
+    if (s >= max * .8) return 'var(--success)';
+    if (s >= max * .5) return 'var(--gold)';
+    return 'var(--danger)';
+  }
   function fmtDt(iso) { if (!iso) return '∞'; const d = new Date(iso); return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
 
   // ── Exam form renderer (shared by create + edit) ───────────────────────────
@@ -785,7 +796,8 @@
       + '<input type="datetime-local" id="fEnd" class="inp" value="' + toLocal(e.end_time) + '"/></div>';
     html += '</div>';
 
-    // Total marks + public
+    // Total marks + public + released
+    const isReleasedChecked = (e.is_released !== false) ? 'checked' : '';
     html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0">';
     html += '<div class="form-group"><label class="form-label">Total Marks</label>'
       + '<input type="number" id="fTotalMarks" class="inp" value="' + totalMarks + '" min="1" step="0.5"/></div>';
@@ -797,6 +809,13 @@
       + '</label></div>';
     html += '</div>';
 
+    html += '<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:9px;background:var(--hover-bg);border:1px solid var(--border);margin-bottom:14px">'
+      + '<input type="checkbox" id="fReleased" ' + isReleasedChecked + ' style="accent-color:var(--success);width:16px;height:16px"/>'
+      + '<label for="fReleased" style="font-size:13px;cursor:pointer;flex:1">'
+      + '<i class="fa-solid fa-bullhorn mr-1" style="color:var(--success)"></i>'
+      + 'Released to students <span style="color:var(--muted);font-weight:400">(uncheck to prepare the exam as a draft — students and guests cannot see or take it until you release it)</span>'
+      + '</label></div>';
+
     // Help methods
     html += '<div style="margin-top:4px"><label class="form-label">Allowed Helping Methods &amp; Costs</label>';
     html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px">';
@@ -806,26 +825,32 @@
     document.getElementById(containerId).innerHTML = html;
   }
 
-  function collectExamFormData() {
+  function collectExamFormData(containerId) {
+    // Scope all lookups to the specific form container so the Create form and
+    // the Edit modal (which share the same field IDs) never collide.
+    const root = containerId ? document.getElementById(containerId) : document;
+    if (!root) return { name: '' }; // fails validation upstream rather than silently grabbing the wrong form
+
     const allowed = [], costs = {};
     Object.keys(HELP_LABELS).forEach(k => {
-      if (document.getElementById('hc_' + k)?.checked) allowed.push(k);
-      const ci = document.getElementById('hcost_' + k);
+      if (root.querySelector('#hc_' + k)?.checked) allowed.push(k);
+      const ci = root.querySelector('#hcost_' + k);
       if (ci) costs[k] = parseFloat(ci.value) || HELP_LABELS[k].defaultCost;
     });
 
     return {
-      name: document.getElementById('fName')?.value.trim() || '',
-      course_name: document.getElementById('fCourse')?.value.trim() || '',
-      course_code: document.getElementById('fCode')?.value.trim() || '',
-      description: document.getElementById('fDesc')?.value.trim() || '',
-      questions_per_student: parseInt(document.getElementById('fQCount')?.value) || 1,
-      start_time: document.getElementById('fStart')?.value || null,
-      end_time: document.getElementById('fEnd')?.value || null,
+      name: root.querySelector('#fName')?.value.trim() || '',
+      course_name: root.querySelector('#fCourse')?.value.trim() || '',
+      course_code: root.querySelector('#fCode')?.value.trim() || '',
+      description: root.querySelector('#fDesc')?.value.trim() || '',
+      questions_per_student: parseInt(root.querySelector('#fQCount')?.value) || 1,
+      start_time: root.querySelector('#fStart')?.value || null,
+      end_time: root.querySelector('#fEnd')?.value || null,
       allowed_helps: allowed,
       help_costs: costs,
-      is_public: document.getElementById('fPublic')?.checked || false,
-      total_marks: parseFloat(document.getElementById('fTotalMarks')?.value) || 10,
+      is_public: root.querySelector('#fPublic')?.checked || false,
+      is_released: root.querySelector('#fReleased') ? root.querySelector('#fReleased').checked : true,
+      total_marks: parseFloat(root.querySelector('#fTotalMarks')?.value) || 10,
     };
   }
 
@@ -868,7 +893,7 @@
 
   // ── Create exam ────────────────────────────────────────────────────────────
   async function createExam() {
-    const body = collectExamFormData();
+    const body = collectExamFormData('createExamForm');
     if (!body.name) { toast('Exam name is required.', 'error'); return; }
     const data = await api('/api/teacher/exams', body);
     if (!data.ok) { toast(data.error, 'error'); return; }
@@ -939,20 +964,20 @@
 
     <div id="dtab-questions-panel">
       <div class="card p-5">
-    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:14px">
-            <h3 style="font-size:15px;font-weight:600">Questions (${exam.question_count})</h3>
-            <div style="display:flex;gap:6px;flex-wrap:wrap">
-              <button class="btn btn-primary btn-sm" onclick="openAddQModal(${examId})"><i class="fa-solid fa-plus"></i> Add Question</button>
-              <button class="btn btn-secondary btn-sm" onclick="directExportJson(${examId})"><i class="fa-solid fa-file-code"></i> JSON</button>
-              <button class="btn btn-success btn-sm" onclick="directExportExcel(${examId})"><i class="fa-solid fa-file-excel"></i> Excel</button>
-              <button class="btn btn-danger btn-sm" onclick="clearQuestions(${examId})"><i class="fa-solid fa-trash"></i></button>
-            </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+          <h3 style="font-size:15px;font-weight:600">Questions (${exam.question_count})</h3>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button class="btn btn-primary btn-sm" onclick="openAddQModal(${examId})"><i class="fa-solid fa-plus"></i> Add Question</button>
+            <button class="btn btn-secondary btn-sm" onclick="directExportJson(${examId})"><i class="fa-solid fa-file-code"></i> JSON</button>
+            <button class="btn btn-success btn-sm" onclick="directExportExcel(${examId})"><i class="fa-solid fa-file-excel"></i> Excel</button>
+            <button class="btn btn-danger btn-sm" onclick="clearQuestions(${examId})"><i class="fa-solid fa-trash"></i></button>
           </div>
+        </div>
         <div style="position:relative;margin-bottom:12px">
           <i class="fa-solid fa-magnifying-glass" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:12px;pointer-events:none"></i>
           <input type="text" id="qSearchInput" class="inp" style="padding-left:32px;padding-top:8px;padding-bottom:8px;font-size:13px" placeholder="Search questions…" oninput="filterQuestions(this.value)"/>
         </div>
-        ${exam.questions.length ? renderQMarks(exam) : ''}
+        ${exam.questions.length ? renderMarksNote(exam) : ''}
         <div id="questionsAccordion">${renderQAccordion(exam.questions)}</div>
       </div>
     </div>
@@ -961,24 +986,14 @@
 
   }
 
-  function renderQMarks(exam) {
-    var qm = exam.question_marks || {};
-    var def_m = exam.questions.length ? (exam.total_marks / exam.questions.length).toFixed(2) : exam.total_marks;
-    var html = '<div style="background:var(--hover-bg);border-radius:10px;padding:12px;margin-bottom:14px">';
-    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">';
-    html += '<p style="font-size:12px;font-weight:600"><i class="fa-solid fa-star mr-1" style="color:var(--gold)"></i>Per-question marks <span style="font-weight:400;color:var(--muted)">(default ' + parseFloat(def_m) + ' each)</span></p>';
-    html += '<button class="btn btn-primary btn-sm" onclick="saveQuestionMarks(' + exam.id + ')"><i class="fa-solid fa-save"></i> Save Marks</button>';
-    html += '</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px">';
-    exam.questions.forEach(function (q, i) {
-      var val = qm[String(q.id)] !== undefined ? qm[String(q.id)] : parseFloat(def_m);
-      html += '<div style="display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 10px">';
-      html += '<span style="font-size:11px;color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + escHtml(q.text) + '">' + (i + 1) + '. ' + escHtml(q.text.substring(0, 28)) + (q.text.length > 28 ? '&hellip;' : '') + '</span>';
-      html += '<input type="number" id="qmark-' + q.id + '" value="' + val + '" step="0.5" min="0" style="width:54px;padding:4px 6px;border-radius:6px;border:1px solid var(--border);background:var(--inp-bg);color:var(--text);font-size:12px;font-family:monospace;text-align:center"/>';
-      html += '</div>';
-    });
-    html += '</div></div>';
-    return html;
+  function renderMarksNote(exam) {
+    var perQ = exam.questions.length ? (exam.total_marks / exam.questions.length).toFixed(2) : exam.total_marks;
+    return '<div style="background:var(--hover-bg);border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:8px">'
+      + '<i class="fa-solid fa-circle-info" style="color:var(--accent)"></i>'
+      + '<p style="font-size:12px;color:var(--text2)">Total marks (' + exam.total_marks + ') are split equally across all ' + exam.questions.length + ' question' + (exam.questions.length !== 1 ? 's' : '') + ' — <strong>' + parseFloat(perQ) + ' mark' + (parseFloat(perQ) !== 1 ? 's' : '') + ' each</strong>.</p>'
+      + '</div>';
   }
+
 
   function renderQAccordion(questions) {
     if (!questions || !questions.length)
@@ -1025,7 +1040,7 @@
 
   async function saveExamEdit() {
     const examId = document.getElementById('editExamId').value;
-    const body = collectExamFormData();
+    const body = collectExamFormData('editExamFormContent');
     if (!body.name) { toast('Exam name is required.', 'error'); return; }
     const data = await api('/api/teacher/exams/' + examId, body, 'PUT');
     if (!data.ok) { toast(data.error, 'error'); return; }
@@ -1051,17 +1066,8 @@
   }
 
   // ── AI Import ──────────────────────────────────────────────────────────────
-  let _aiQuestions = [], _aiExamId = null;
+  let _aiQuestions = [];
 
-  function openAiModal(examId) {
-    _aiExamId = examId; _aiQuestions = [];
-    document.getElementById('aiPreview').style.display = 'none';
-    document.getElementById('aiLoading').style.display = 'none';
-    document.getElementById('aiText').value = '';
-    document.getElementById('aiFileName').style.display = 'none';
-    document.getElementById('aiFileBtn').disabled = true;
-    openModal('aiModal');
-  }
   function onAiFile(input) {
     const f = input.files[0]; if (!f) return;
     const el = document.getElementById('aiFileName');
@@ -1160,12 +1166,13 @@
   function removeAiOpt(idx, oi) { if (_aiQuestions[idx].options.length <= 2) { toast('Need at least 2 options.', 'error'); return; } _aiQuestions[idx].options.splice(oi, 1); renderAiPreview(); }
 
   async function saveAiQuestions() {
-    if (!_aiQuestions.length || !_aiExamId) return;
-    const data = await api('/api/teacher/exams/' + _aiExamId + '/questions', { questions: _aiQuestions });
+    if (!_aiQuestions.length) { toast('No questions to save.', 'error'); return; }
+    if (!_addQExamId) { toast('No exam selected.', 'error'); return; }
+    const data = await api('/api/teacher/exams/' + _addQExamId + '/questions', { questions: _aiQuestions });
     if (!data.ok) { toast(data.error, 'error'); return; }
     toast('Saved ' + data.added + ' questions.', 'success');
-    closeModal('aiModal');
-    await openExamDetail(_aiExamId);
+    closeModal('addQModal');
+    await openExamDetail(_addQExamId);
   }
 
   // ── Edit question (DB) ─────────────────────────────────────────────────────
@@ -1262,13 +1269,13 @@
       <td>${i + 1}</td>
       <td style="font-weight:500">${escHtml(r.student_name)}</td>
       <td style="color:var(--muted)">${escHtml(r.student_id)}</td>
-      <td><span style="font-family:'JetBrains Mono',monospace;font-weight:700;color:${scoreColor(r.final_score)}">${r.final_score ?? '–'}</span>/10
+      <td><span style="font-family:'JetBrains Mono',monospace;font-weight:700;color:${scoreColor(r.final_score, r.total_marks)}">${r.final_score ?? '–'}</span>/${r.total_marks ?? 10}
         ${r.score_override != null ? '<span class="badge badge-warn ml-1" style="font-size:10px">edited</span>' : ''}
       </td>
       <td style="color:var(--muted);white-space:nowrap;font-size:12px">${r.completed_at || '–'}</td>
       <td>
         <div style="display:flex;gap:4px">
-          <button class="btn btn-secondary btn-sm" style="padding:3px 7px" onclick="overrideScoreWithPwd(${r.id},${r.final_score})"><i class="fa-solid fa-pen-to-square"></i></button>
+          <button class="btn btn-secondary btn-sm" style="padding:3px 7px" onclick="overrideScoreWithPwd(${r.id},${r.final_score},${r.total_marks ?? 10})"><i class="fa-solid fa-pen-to-square"></i></button>
           <button class="btn btn-danger btn-sm" style="padding:3px 7px" onclick="deleteResultWithPwd(${r.id})"><i class="fa-solid fa-trash"></i></button>
         </div>
       </td>
@@ -1553,9 +1560,20 @@
   }
 
   // ── Export questions ───────────────────────────────────────────────────────
+  // Called from inside the Add Question modal's Export tab (uses current modal exam)
   async function exportQuestionsJson() {
-    const data = await api('/api/teacher/exams/' + _addQExamId + '/questions');
+    await directExportJson(_addQExamId);
+  }
+  async function exportQuestionsExcel() {
+    directExportExcel(_addQExamId);
+  }
+
+  // Called directly from the exam detail page — no need to open the modal first
+  async function directExportJson(examId) {
+    if (!examId) { toast('No exam selected.', 'error'); return; }
+    const data = await api('/api/teacher/exams/' + examId + '/questions');
     if (!data.ok) { toast(data.error, 'error'); return; }
+    if (!data.questions.length) { toast('This exam has no questions to export.', 'info'); return; }
     const blob = new Blob([JSON.stringify({ questions: data.questions }, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -1564,8 +1582,9 @@
     URL.revokeObjectURL(a.href);
   }
 
-  async function exportQuestionsExcel() {
-    window.location.href = '/api/teacher/exams/' + _addQExamId + '/export_questions';
+  function directExportExcel(examId) {
+    if (!examId) { toast('No exam selected.', 'error'); return; }
+    window.location.href = '/api/teacher/exams/' + examId + '/export_questions';
   }
 
   // ── Password-protected result actions ─────────────────────────────────────
@@ -1595,12 +1614,13 @@
   }
 
   // ── Override / delete with password ───────────────────────────────────────
-  function overrideScoreWithPwd(attemptId, current) {
+  function overrideScoreWithPwd(attemptId, current, maxMarks) {
+    maxMarks = maxMarks || 10;
     requirePassword('Edit Score', 'Enter password to modify this result.', async () => {
-      const val = prompt('Enter new score (0–10):', current ?? '');
+      const val = prompt('Enter new score (0–' + maxMarks + '):', current ?? '');
       if (val === null) return;
       const score = parseFloat(val);
-      if (isNaN(score) || score < 0 || score > 10) { toast('Invalid score.', 'error'); return; }
+      if (isNaN(score) || score < 0 || score > maxMarks) { toast('Invalid score. Must be between 0 and ' + maxMarks + '.', 'error'); return; }
       const data = await api('/api/teacher/attempts/' + attemptId + '/override', { score });
       if (!data.ok) { toast(data.error, 'error'); return; }
       toast('Score updated.', 'success');
@@ -1625,32 +1645,6 @@
       r.student_name.toLowerCase().includes(q) ||
       (r.student_id || '').toLowerCase().includes(q)
     ));
-  }
-
-  // ── Direct export (without opening Add Question modal) ────────────────────
-  async function directExportJson(examId) {
-    const data = await api('/api/teacher/exams/' + examId + '/questions');
-    if (!data.ok) { toast(data.error, 'error'); return; }
-    if (!data.questions.length) { toast('No questions to export.', 'info'); return; }
-    const blob = new Blob([JSON.stringify({ questions: data.questions }, null, 2)], { type: 'application/json' });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-    a.download = 'exam_questions.json'; a.click(); URL.revokeObjectURL(a.href);
-  }
-
-  function directExportExcel(examId) {
-    window.location.href = '/api/teacher/exams/' + examId + '/export_questions';
-  }
-
-  // ── Per-question marks ────────────────────────────────────────────────────
-  async function saveQuestionMarks(examId) {
-    const qm = {};
-    document.querySelectorAll('[id^="qmark-"]').forEach(inp => {
-      const v = parseFloat(inp.value);
-      if (!isNaN(v)) qm[inp.id.replace('qmark-', '')] = v;
-    });
-    const data = await api('/api/teacher/exams/' + examId + '/scoring', { question_marks: qm });
-    if (!data.ok) { toast(data.error, 'error'); return; }
-    toast('Marks saved.', 'success');
   }
 
   // ── Init ───────────────────────────────────────────────────────────────────

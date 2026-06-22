@@ -1,5 +1,6 @@
 from __future__ import annotations
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 import json
 import hashlib
 import secrets
@@ -7,8 +8,19 @@ from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
 
+CAIRO_TZ = ZoneInfo("Africa/Cairo")
+
 
 def _now(): return datetime.now(timezone.utc)
+
+
+def cairo_now() -> datetime:
+    """Current time in Cairo, naive (tzinfo stripped) so it compares directly
+    with the naive datetimes stored from datetime-local form inputs.
+    Uses the IANA Africa/Cairo zone, which correctly applies whatever DST
+    rule is in effect for the current date (Egypt has changed its DST policy
+    several times, so this must be computed live rather than hardcoded)."""
+    return datetime.now(CAIRO_TZ).replace(tzinfo=None)
 
 
 def hash_password(p):
@@ -77,9 +89,8 @@ class Exam(db.Model):
     created_at = db.Column(db.DateTime, nullable=False, default=_now)
     is_active = db.Column(db.Boolean, nullable=False, default=True)
     is_public = db.Column(db.Boolean, nullable=False, default=False)
+    is_released = db.Column(db.Boolean, nullable=False, default=True)
     total_marks = db.Column(db.Float, nullable=False, default=10.0)
-    _question_marks = db.Column(
-        "question_marks", db.Text, nullable=False, default="{}")
     teacher = db.relationship("Teacher", back_populates="exams")
     questions = db.relationship("ExamQuestion", back_populates="exam",
                                 cascade="all, delete-orphan", order_by="ExamQuestion.position")
@@ -94,23 +105,23 @@ class Exam(db.Model):
     def help_costs(self): return json.loads(self._help_costs)
     @help_costs.setter
     def help_costs(self, v): self._help_costs = json.dumps(v)
-    @property
-    def question_marks(self): return json.loads(self._question_marks)
-    @question_marks.setter
-    def question_marks(self, v): self._question_marks = json.dumps(v)
 
-    def marks_for_question(self, qid):
-        qm = self.question_marks
-        if str(qid) in qm:
-            return float(qm[str(qid)])
-        n = len(self.questions)
-        return round(self.total_marks/n, 2) if n else self.total_marks
+    def marks_for_question(self, qid, question_count: int | None = None):
+        """Marks awarded for a fully-correct answer to any question.
+        total_marks is always split equally across the questions assigned
+        to the attempt (question_count), falling back to the full question
+        bank size if that isn't known."""
+        n = question_count if question_count is not None else len(
+            self.questions)
+        return round(self.total_marks / n, 2) if n else self.total_marks
 
     @property
     def is_open(self):
         if not self.is_active:
             return False
-        now = datetime.now()
+        if not self.is_released:
+            return False
+        now = cairo_now()
         if self.start_time and now < self.start_time:
             return False
         if self.end_time and now > self.end_time:
@@ -121,12 +132,22 @@ class Exam(db.Model):
     def status(self):
         if not self.is_active:
             return "inactive"
-        now = datetime.now()
+        if not self.is_released:
+            return "draft"
+        now = cairo_now()
         if self.start_time and now < self.start_time:
             return "upcoming"
         if self.end_time and now > self.end_time:
             return "ended"
         return "open"
+
+    @property
+    def seconds_until_open(self) -> int | None:
+        """Seconds remaining until start_time, or None if not upcoming."""
+        if self.status != "upcoming" or not self.start_time:
+            return None
+        delta = (self.start_time - cairo_now()).total_seconds()
+        return max(0, int(delta))
 
     def to_dict(self, include_questions=False):
         d = {"id": self.id, "name": self.name, "course_name": self.course_name,
@@ -136,9 +157,11 @@ class Exam(db.Model):
              "end_time": self.end_time.isoformat() if self.end_time else None,
              "allowed_helps": self.allowed_helps, "help_costs": self.help_costs,
              "is_active": self.is_active, "is_public": self.is_public,
-             "total_marks": self.total_marks, "question_marks": self.question_marks,
+             "is_released": self.is_released,
+             "total_marks": self.total_marks,
              "status": self.status, "question_count": len(self.questions),
              "attempt_count": len(self.attempts),
+             "seconds_until_open": self.seconds_until_open,
              "teacher_name": self.teacher.full_name if self.teacher else "",
              "teacher_username": self.teacher.username if self.teacher else "",
              "created_at": self.created_at.isoformat()}

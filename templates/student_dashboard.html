@@ -271,6 +271,17 @@
   </div>
 </div>
 
+<!-- Review answers modal — uses the standard app modal system (Escape, backdrop click, focus trap) -->
+<div id="reviewModal" class="modal-backdrop">
+  <div class="modal-box card p-6" style="max-width:600px;max-height:85vh;overflow-y:auto;position:relative">
+    <button onclick="closeModal('reviewModal')"
+      style="position:absolute;top:12px;right:12px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px">
+      <i class="fa-solid fa-xmark"></i>
+    </button>
+    <div id="reviewModalContent"></div>
+  </div>
+</div>
+
 <script>
   // @ts-nocheck
   'use strict';
@@ -313,17 +324,26 @@
   }
 
   function statusBadgeClass(s) { return { open: 'success', upcoming: 'accent', ended: '', inactive: 'danger' }[s] || ''; }
-  function scoreColor(s) { if (s == null) return 'var(--muted)'; if (s >= 8) return 'var(--success)'; if (s >= 5) return 'var(--gold)'; return 'var(--danger)'; }
+  function scoreColor(s, max) {
+    max = max || 10;
+    if (s == null) return 'var(--muted)';
+    if (s >= max * .8) return 'var(--success)';
+    if (s >= max * .5) return 'var(--gold)';
+    return 'var(--danger)';
+  }
   function fmtDt(iso) { if (!iso) return ''; const d = new Date(iso); return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
+
+  let _countdownInterval = null;
 
   async function loadAvailableExams() {
     const data = await api('/api/student/available_exams');
     if (!data.ok) return;
     const list = document.getElementById('availableList'), empty = document.getElementById('availableEmpty');
+    if (_countdownInterval) { clearInterval(_countdownInterval); _countdownInterval = null; }
     if (!data.exams.length) { list.innerHTML = ''; empty.style.display = ''; return; }
     empty.style.display = 'none';
     list.innerHTML = data.exams.map(e => {
-      const ss = e.student_status, isOpen = e.status === 'open';
+      const ss = e.student_status, isOpen = e.status === 'open', isUpcoming = e.status === 'upcoming';
       const canTake = isOpen && ss === 'not_started', done = ss === 'completed', inProg = ss === 'in_progress';
       return `
     <div class="exam-card ${canTake ? 'available' : ''}">
@@ -347,12 +367,50 @@
         ${e.start_time ? `<span><i class="fa-solid fa-calendar-check mr-1"></i>${fmtDt(e.start_time)}</span>` : ''}
         ${e.end_time ? `<span><i class="fa-solid fa-calendar-xmark mr-1"></i>${fmtDt(e.end_time)}</span>` : ''}
       </div>
+      ${isUpcoming && e.seconds_until_open != null ? `
+      <div class="card-inner p-3" style="text-align:center;margin-bottom:12px">
+        <p style="font-size:11px;color:var(--muted);margin-bottom:4px"><i class="fa-solid fa-hourglass-half mr-1"></i>Opens in</p>
+        <p class="exam-countdown" data-seconds="${e.seconds_until_open}" style="font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;color:var(--accent2)">--:--:--</p>
+      </div>` : ''}
       ${canTake ? `<a href="/student/exam/${e.id}" class="btn btn-primary" style="width:100%;padding:11px"><i class="fa-solid fa-play"></i> Start Exam</a>` : ''}
       ${inProg ? `<a href="/student/exam/${e.id}" class="btn btn-gold"    style="width:100%;padding:11px"><i class="fa-solid fa-rotate-right"></i> Resume</a>` : ''}
       ${done ? `<div class="btn btn-secondary" style="width:100%;cursor:default"><i class="fa-solid fa-check-circle" style="color:var(--success)"></i> Completed</div>` : ''}
-      ${!isOpen && !done ? `<div class="btn btn-secondary" style="width:100%;cursor:default;opacity:.6"><i class="fa-solid fa-lock mr-1"></i>${e.status === 'upcoming' ? 'Not open yet' : 'Exam ended'}</div>` : ''}
+      ${!isOpen && !done && !isUpcoming ? `<div class="btn btn-secondary" style="width:100%;cursor:default;opacity:.6"><i class="fa-solid fa-lock mr-1"></i>Exam ended</div>` : ''}
+      ${isUpcoming && !done ? `<div class="btn btn-secondary" style="width:100%;cursor:default;opacity:.6"><i class="fa-solid fa-lock mr-1"></i>Not open yet</div>` : ''}
     </div>`;
     }).join('');
+
+    startCountdowns();
+  }
+
+  function startCountdowns() {
+    updateCountdowns();
+    _countdownInterval = setInterval(updateCountdowns, 1000);
+  }
+
+  function updateCountdowns() {
+    let anyZero = false;
+    document.querySelectorAll('.exam-countdown').forEach(el => {
+      let secs = parseInt(el.dataset.seconds, 10);
+      if (isNaN(secs) || secs <= 0) {
+        el.textContent = '00:00:00';
+        anyZero = true;
+        return;
+      }
+      secs -= 1;
+      el.dataset.seconds = secs;
+      const h = Math.floor(secs / 3600);
+      const m = Math.floor((secs % 3600) / 60);
+      const s = secs % 60;
+      const pad = n => String(n).padStart(2, '0');
+      el.textContent = pad(h) + ':' + pad(m) + ':' + pad(s);
+      if (secs <= 0) anyZero = true;
+    });
+    // When any countdown hits zero, refresh the list so the exam becomes available
+    if (anyZero) {
+      clearInterval(_countdownInterval);
+      setTimeout(loadAvailableExams, 1500);
+    }
   }
 
   async function loadHistory() {
@@ -370,7 +428,7 @@
           ${r.helps_used && r.helps_used.length ? `<p style="font-size:11px;color:var(--muted);margin-top:4px"><i class="fa-solid fa-hand-holding-heart mr-1"></i>${r.helps_used.join(', ')}</p>` : ''}
         </div>
         <div style="text-align:right;flex-shrink:0">
-          <span style="font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;color:${scoreColor(r.final_score)}">${r.final_score ?? '–'}</span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;color:${scoreColor(r.final_score, r.total_marks)}">${r.final_score ?? '–'}</span>
           <span style="color:var(--muted);font-size:13px"> / ${r.total_marks ?? 10}</span>
           <p style="font-size:11px;color:var(--muted);margin-top:2px">${r.status}</p>
         </div>
@@ -392,7 +450,7 @@
     const scColor = sc >= total * .8 ? 'var(--success)' : sc >= total * .5 ? 'var(--gold)' : 'var(--danger)';
 
     let html = '<div>';
-    html += '<h3 style="font-size:16px;font-weight:700;margin-bottom:4px">' + escHtml(att.exam_name) + '</h3>';
+    html += '<h3 style="font-size:16px;font-weight:700;margin-bottom:4px;padding-right:28px">' + escHtml(att.exam_name) + '</h3>';
     html += '<p style="font-size:13px;color:var(--muted);margin-bottom:16px">Score: <strong style="color:' + scColor + '">' + (sc ?? '–') + ' / ' + total + '</strong> &middot; ' + (att.completed_at || '') + '</p>';
 
     if (!results.length) {
@@ -422,18 +480,11 @@
     }
     html += '</div>';
 
-    const ov = document.createElement('div');
-    ov.style.cssText = 'position:fixed;inset:0;background:var(--modal-bg);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px';
-    const box = document.createElement('div');
-    box.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;max-width:600px;width:100%;max-height:85vh;overflow-y:auto;position:relative';
-    const closeBtn = document.createElement('button');
-    closeBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
-    closeBtn.style.cssText = 'position:absolute;top:12px;right:12px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px';
-    closeBtn.onclick = function () { document.body.removeChild(ov); };
-    box.appendChild(closeBtn);
-    box.innerHTML += html;
-    ov.appendChild(box);
-    document.body.appendChild(ov);
+    // Populate the existing modal markup (its close button lives outside this
+    // container and is never replaced, so it keeps its event listener intact)
+    // and use the app's standard modal system for Escape / backdrop-click / focus-trap.
+    document.getElementById('reviewModalContent').innerHTML = html;
+    openModal('reviewModal');
   }
 
   async function loadStudentStats() {

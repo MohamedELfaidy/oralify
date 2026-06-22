@@ -413,10 +413,14 @@
     document.getElementById('doneScore').textContent = sc != null ? sc.toFixed(1) : '–';
     document.getElementById('doneScore').style.color = sc != null ? (sc >= TOTAL_MARKS * .8 ? 'var(--success)' : sc >= TOTAL_MARKS * .5 ? 'var(--gold)' : 'var(--danger)') : 'var(--muted)';
     document.getElementById('doneTime').textContent = elapsed;
-    const HL = { hint: 'Hint (−0.5)', remove_wrong: 'Remove ×2 (−1)', ask_ai: 'Ask AI (−1)', ask_friend: 'Ask Friend (−1)', change_question: 'Skip (−1)', add_time: '+1 min (−1)' };
+    const HL = { hint: 'Hint', remove_wrong: 'Remove ×2', ask_ai: 'Ask AI', ask_friend: 'Ask Friend', change_question: 'Skip', add_time: '+1 min' };
     const hs = document.getElementById('helpsSummary');
     hs.innerHTML = '<p style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;margin-bottom:8px">Help Used</p>'
-      + (helps.length ? helps.map(h => `<div style="font-size:13px;padding:5px 0;border-bottom:1px solid var(--border);color:var(--text2)">${HL[h] || h}</div>`).join('')
+      + (helps.length ? helps.map(h => {
+        const cost = st.costs[h] ?? 1;
+        const name = HL[h] || h;
+        return '<div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid var(--border);color:var(--text2)"><span>' + name + '</span><span style="font-family:monospace;color:var(--danger)">−' + cost + '</span></div>';
+      }).join('')
         : '<p style="font-size:13px;color:var(--success)"><i class="fa-solid fa-star mr-1"></i>No help used!</p>');
     showStep('stepDone');
   }

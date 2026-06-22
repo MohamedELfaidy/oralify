@@ -13,7 +13,7 @@ from typing import Any
 # ── Default scoring ───────────────────────────────────────────────────────────
 
 INITIAL_SCORE: float = 10.0
-TIMEOUT_SCORE: float = 7.0
+TIMEOUT_SCORE: float = 0.5
 
 DEFAULT_HELP_COSTS: dict[str, float] = {
     "hint":            0.5,
